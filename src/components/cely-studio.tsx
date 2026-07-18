@@ -409,49 +409,19 @@ export function CelyStudio() {
                     <div><Timer size={14} /><strong>Reconciliation glance</strong></div>
                     <span>~{Math.ceil(glance.estimatedReadSeconds / 60)} min read</span>
                   </div>
-                  {glance.topConcern ? (
-                    <div className="glance-top-concern">
-                      <em>Matters most to the patient</em>
-                      <strong>{glance.topConcern.english}</strong>
-                      <small>{glance.topConcern.native}</small>
-                    </div>
-                  ) : null}
-                  <div className="glance-grid">
-                    <div>
-                      <h5>Today&apos;s concerns</h5>
-                      <ul>
-                        {glance.complaints.map((complaint) => (
-                          <li key={complaint.native}>
-                            {complaint.english}
-                            {complaint.isTop ? <em> · top</em> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h5>Chart history</h5>
-                      {glance.history.problems.length + glance.history.medications.length + glance.history.allergies.length === 0 ? (
-                        <p>No chart facts retrieved.</p>
-                      ) : (
-                        <ul>
-                          {glance.history.problems.map((item) => <li key={`p-${item}`}><em>Dx</em> {item}</li>)}
-                          {glance.history.medications.map((item) => <li key={`m-${item}`}><em>Rx</em> {item}</li>)}
-                          {glance.history.allergies.map((item) => <li key={`a-${item}`}><em>Allergy</em> {item}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                    <div>
-                      <h5>Reconcile &amp; ask</h5>
-                      {glance.reconcile.length + glance.askFirst.length === 0 ? (
-                        <p>Nothing flagged for reconciliation.</p>
-                      ) : (
-                        <ul>
-                          {glance.reconcile.map((item) => <li key={item}>{item}</li>)}
-                          {glance.askFirst.map((item) => <li key={item}>{item}</li>)}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
+                  <ul className="glance-list">
+                    {glance.topConcern ? (
+                      <li title={glance.topConcern.native}><em>Top for patient</em>{glance.topConcern.english}</li>
+                    ) : null}
+                    {glance.complaints.filter((complaint) => !complaint.isTop).map((complaint) => (
+                      <li key={complaint.native} title={complaint.native}><em>Concern</em>{complaint.english}</li>
+                    ))}
+                    {glance.history.problems.length > 0 ? <li><em>Dx</em>{glance.history.problems.join(" · ")}</li> : null}
+                    {glance.history.medications.length > 0 ? <li><em>Rx</em>{glance.history.medications.join(" · ")}</li> : null}
+                    {glance.history.allergies.length > 0 ? <li><em>Allergy</em>{glance.history.allergies.join(" · ")}</li> : null}
+                    {glance.reconcile.map((item) => <li key={item}><em>Reconcile</em>{item}</li>)}
+                    {glance.askFirst.map((item) => <li key={item}><em>Ask</em>{item}</li>)}
+                  </ul>
                 </div>
               ) : null}
 
@@ -536,26 +506,16 @@ export function CelyStudio() {
                     <div><Stethoscope size={14} /><strong>Suggested considerations · ICD-10</strong></div>
                     <span>{run.dxSuggestions.method === "sonnet" ? "Sonnet 5" : "Deterministic"} · not a diagnosis</span>
                   </div>
-                  <ul>
+                  <ul className="dx-list">
                     {run.dxSuggestions.suggestions.map((suggestion) => (
-                      <li key={`${suggestion.icd10}-${suggestion.label}`}>
-                        <span className="icd-chip">{suggestion.icd10}</span>
-                        <div>
-                          <strong>
-                            {suggestion.label}
-                            <em className={`dx-basis dx-${suggestion.basis}`}>
-                              {suggestion.basis === "reported-symptom" ? "Reported symptom" : suggestion.basis === "chart-history" ? "On chart" : "Consider"}
-                            </em>
-                          </strong>
-                          <small>{suggestion.codeLabel}</small>
-                          <p>{suggestion.rationale}</p>
-                          {suggestion.relatedSymptoms.length > 0 ? (
-                            <div className="dx-related">
-                              <em>Ask about:</em>
-                              {suggestion.relatedSymptoms.map((symptom) => <span key={symptom}>{symptom}</span>)}
-                            </div>
-                          ) : null}
-                        </div>
+                      <li key={`${suggestion.icd10}-${suggestion.label}`} title={`${suggestion.codeLabel} — ${suggestion.rationale}`}>
+                        <code>{suggestion.icd10}</code>
+                        {suggestion.label}
+                        <span>
+                          {" — "}
+                          {suggestion.basis === "reported-symptom" ? "reported symptom" : suggestion.basis === "chart-history" ? "on chart" : "consider"}
+                          {suggestion.relatedSymptoms.length > 0 ? ` · ask: ${suggestion.relatedSymptoms.join(", ")}` : ""}
+                        </span>
                       </li>
                     ))}
                   </ul>
