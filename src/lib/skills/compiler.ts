@@ -33,7 +33,7 @@ description: ${description}
 4. Retrieve the minimum relevant Athena problems, medications, allergies, and appointments.
 5. Attach a resource identifier and observation date to every chart-derived fact.
 6. Surface patient/chart conflicts as discrepancies. Never silently reconcile them.
-7. Produce a one-minute handoff with an agenda, relevant history, discrepancies, and open questions.
+7. Produce a one-minute handoff with an evidence-linked agenda, relevant history, discrepancies, and open questions. Every agenda item includes a concise label, a short clinical rationale, and one to three evidence IDs.
 8. Require a qualified human to edit and approve the artifact at an explicit approval gate before any Athena write.
 
 ## Safety contract
@@ -46,7 +46,7 @@ description: ${description}
 
 ## Output contract
 
-Return a structured handoff with: headline, summary, agenda, relevant history, discrepancies, open questions, disposition, confidence, and evidence IDs.
+Return a structured handoff with: headline, summary, evidence-linked agenda items (label, rationale, and one to three evidence IDs), relevant history, discrepancies, open questions, disposition, confidence, and global evidence IDs. Every agenda evidence ID must also appear in the global evidence IDs.
 ${corrections.length ? `\n## Clinician corrections learned from the approved trace\n\n${corrections.map((item) => `- ${item}`).join("\n")}\n` : ""}`;
 
   const policy = {
@@ -65,6 +65,7 @@ ${corrections.length ? `\n## Clinician corrections learned from the approved tra
     expected: {
       disposition: result.handoff.disposition,
       discrepancyCount: result.handoff.discrepancies.length,
+      agenda: result.handoff.agenda.map((item) => ({ label: item.label, evidenceIds: item.evidenceIds })),
       approvalRequired: true,
     },
   };

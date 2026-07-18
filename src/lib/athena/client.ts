@@ -12,13 +12,19 @@ function asRecord(value: unknown): AthenaRecord | null {
     : null;
 }
 
+function flattenRecords(value: unknown): AthenaRecord[] {
+  if (Array.isArray(value)) return value.flatMap(flattenRecords);
+  const record = asRecord(value);
+  return record ? [record] : [];
+}
+
 function unwrapList(payload: unknown, keys: string[]): AthenaRecord[] {
-  if (Array.isArray(payload)) return payload.map(asRecord).filter((item): item is AthenaRecord => item !== null);
+  if (Array.isArray(payload)) return flattenRecords(payload);
   const record = asRecord(payload);
   if (!record) return [];
   for (const key of keys) {
     const value = record[key];
-    if (Array.isArray(value)) return value.map(asRecord).filter((item): item is AthenaRecord => item !== null);
+    if (Array.isArray(value)) return flattenRecords(value);
   }
   return [];
 }
@@ -140,6 +146,13 @@ export class AthenaPreviewClient {
       allergies: unwrapList(values.get("allergies"), ["allergies"]),
       partialFailures,
     };
+  }
+
+  async patientAppointment(patientId: string, appointmentId: string): Promise<AthenaRecord | null> {
+    const payload = await this.request(
+      `/v1/${this.config.practiceId}/patients/${encodeURIComponent(patientId)}/appointments/${encodeURIComponent(appointmentId)}`,
+    );
+    return unwrapList(payload, ["appointments", "appointment"])[0] ?? asRecord(payload);
   }
 
   async createAppointmentNote(appointmentId: string, noteText: string): Promise<unknown> {

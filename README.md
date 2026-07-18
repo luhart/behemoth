@@ -6,13 +6,14 @@ The hackathon wedge is intentionally narrow: a multilingual pre-visit intake for
 
 ## Three-minute demo
 
-1. Start with Elena's Spanish intake. Her chart says lisinopril is active; she says she stopped taking it two weeks ago.
-2. Run `previsit-intake-v1`. The UI shows the bounded intake, Athena evidence, safety gate, and one-minute clinician handoff.
-3. Approve the handoff. Behemoth validates an Athena Preview appointment-note payload; live mutation stays disabled unless explicitly enabled.
-4. Compile the approved trace. The app emits `SKILL.md`, agent UI metadata, a permission policy, and a replayable golden trace.
-5. Switch to the red-flag fixture. The same workflow takes the emergency branch instead of fabricating a routine handoff.
+1. Choose Tagalog for Maya Santos and use the editable demo response. Maya says her shoulder is `kumikirot`, reports morning dizziness, and says she stopped her blood-pressure medicine.
+2. Behemoth preserves her exact words, asks one bounded question to distinguish an intermittent ache from burning or stinging, and requires Maya to confirm the bilingual rendering.
+3. The confirmed intake runs `previsit-intake-v1` against Maya's real synthetic Athena Preview record and appointment. Athena adds hypertension and active lisinopril context; the clinician sees the resulting medication discrepancy.
+4. Approve the handoff. Behemoth records a dry-run receipt for Preview appointment `2589077`; no Athena mutation occurs in the hackathon configuration.
+5. Compile the approved trace. The app emits `SKILL.md`, agent UI metadata, a permission policy, and a replayable golden trace.
+6. Switch to the red-flag replay—or type chest pressure with shortness of breath into the Spanish intake. The deterministic policy immediately displays bilingual emergency guidance, bypasses the model, and clinician acknowledgement performs no Athena write.
 
-The deterministic fixtures are the reliable golden path. Athena and Claude can be enabled independently, and failures degrade back to the same governed interface.
+The golden-path patient interaction and every safety gate remain deterministic. Free-form multilingual intake uses Sonnet for a bounded native-language restatement plus a real English clinician interpretation; model failure stops at the clarification step instead of displaying source-language text as English. Athena and Claude can be enabled independently, and handoff failures degrade to an evidence-linked fallback without swapping in another patient's canned summary.
 
 ## Quick start
 
@@ -47,22 +48,22 @@ ATHENA_MODE=live
 NEXT_PUBLIC_ATHENA_CLIENT_ID_2_LEG=...
 ATHENA_CLIENT_SECRET_2_LEG=...
 ATHENA_PRACTICE_ID=1959870
-ATHENA_DEPARTMENT_ID=1
-ATHENA_DEMO_PATIENT_ID=1
+ATHENA_DEPARTMENT_ID=150
+ATHENA_DEMO_PATIENT_ID=946985
+ATHENA_DEMO_APPOINTMENT_ID=2589077
 ```
 
-Live reads can remain enabled while writes stay off. To test the real Preview write path, first verify the synthetic appointment manually, then set both:
+`946985` is a dedicated synthetic Preview patient named Maya Santos (`tgl`). The demo setup contains only the minimum useful context: hypertensive disorder, active lisinopril, and booked appointment `2589077` on July 20, 2026 at 08:00. It was created for this hackathon so shared canonical Preview patients do not need to be renamed.
 
-```bash
-ATHENA_DEMO_APPOINTMENT_ID=...
-ATHENA_WRITEBACK_ENABLED=true
-```
+Live reads can remain enabled while writes stay off. Keep `ATHENA_WRITEBACK_ENABLED=false` for this scaffold. The live route re-fetches the configured patient-scoped appointment and verifies ownership, booked status, and date before mutation, but production-quality writeback still needs an authenticated server-side run/approval record and server-built note content.
 
 The client refuses live mode against any base URL other than Athena Preview. It never sends credentials to the browser and does not include upstream error bodies in responses.
 
 ## Claude
 
-Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to ask Claude for the structured handoff. Zod constrains the output; a deterministic safety branch runs before generation, and a fixture handoff is used if the model is unavailable.
+Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to enable both AI stages. `ANTHROPIC_INTERPRETATION_MODEL=claude-sonnet-5` handles free-form bilingual interpretation before patient confirmation; `ANTHROPIC_MODEL=claude-haiku-4-5` generates the downstream structured handoff. Both outputs are schema-constrained. The deterministic safety branch runs before either generation, emergencies bypass the models, and interpretation fails closed if Sonnet is unavailable.
+
+Each visit-agenda item carries a clinical rationale and one to three evidence citations. The clinician view renders those supporting patient statements or Athena facts directly beneath the agenda item so the recommendation is inspectable rather than merely asserted.
 
 ## Project map
 
@@ -70,7 +71,7 @@ Set `AGENT_MODE=live` and `ANTHROPIC_API_KEY` to ask Claude for the structured h
 src/app/                    Next.js UI and route handlers
 src/lib/athena/             Preview-only auth and typed client
 src/lib/workflow/           schemas, runner, and write policy
-src/lib/ai/                 constrained handoff generation
+src/lib/ai/                 constrained interpretation and handoff generation
 src/lib/skills/             approved-trace skill compiler
 src/lib/demo/               synthetic golden-path fixtures
 skills/                     portable Codex/Claude-compatible skills
@@ -81,9 +82,12 @@ tests/                      policy and compiler contract tests
 
 - Synthetic or explicitly authorized Preview data only.
 - Patient words and chart facts remain distinct and cited.
+- Routine patient-entered text is not forwarded until the patient confirms the bilingual rendering; a red-flag report instead enters the immediate safety branch with its original wording and displayed guidance attached.
+- A patient confirms the native-language restatement, not the English translation; the handoff preserves that provenance and any unresolved ambiguity for clinician review.
 - Missing chart data is “unavailable,” never assumed negative.
-- Deterministic red-flag checks can halt the normal workflow.
+- Deterministic English, Spanish, and Tagalog red-flag checks run before the model and can halt the normal workflow.
 - The model cannot diagnose, prescribe, approve itself, or write autonomously.
+- Every visit-agenda recommendation cites supplied evidence already present in the handoff.
 - Every write requires a human role, explicit approval, Preview environment, and a separate configuration flag.
 
 ## What is new

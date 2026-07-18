@@ -1,0 +1,185 @@
+import { describe, expect, test } from "bun:test";
+
+import {
+  ConfirmedIntakeSchema,
+  IntakeInterpretationSchema,
+  RunInputSchema,
+  UrgentIntakeSchema,
+} from "../src/lib/workflow/contracts";
+import { getScenario } from "../src/lib/demo/fixtures";
+import { interpretationValidationError } from "../src/lib/workflow/interpretation";
+import { evaluateIntakeSafety } from "../src/lib/workflow/policy";
+
+describe("confirmed intake contract", () => {
+  const valid = {
+    preferredLanguage: "Tagalog" as const,
+    chiefComplaint: "Masakit at kumikirot ang dibdib ko.",
+    clarificationQuestion: "Saan at anong uri ng sakit ang nararamdaman mo?",
+    clarificationResponse: "Sa dibdib; parang pressure at hirap akong huminga.",
+    englishInterpretation: "Aching chest pressure with difficulty breathing.",
+    interpretationConfirmed: true as const,
+    confidence: "high" as const,
+  };
+
+  test("accepts a bounded, explicitly confirmed interpretation", () => {
+    expect(ConfirmedIntakeSchema.parse(valid)).toEqual(valid);
+  });
+
+  test("rejects an interpretation the patient did not confirm", () => {
+    const parsed = ConfirmedIntakeSchema.safeParse({ ...valid, interpretationConfirmed: false });
+    expect(parsed.success).toBe(false);
+  });
+
+  test("rejects unsupported language and oversized patient input", () => {
+    expect(ConfirmedIntakeSchema.safeParse({ ...valid, preferredLanguage: "English" }).success).toBe(false);
+    expect(ConfirmedIntakeSchema.safeParse({ ...valid, chiefComplaint: "x".repeat(1001) }).success).toBe(false);
+  });
+
+  test("requires patient confirmation for the standard workflow at the API contract", () => {
+    expect(RunInputSchema.safeParse({ scenarioId: "maya-previsit" }).success).toBe(false);
+    expect(RunInputSchema.safeParse({ scenarioId: "maya-previsit", intake: valid }).success).toBe(true);
+  });
+
+  test("keeps the isolated red-flag replay available without patient intake", () => {
+    expect(RunInputSchema.safeParse({ scenarioId: "luis-escalation" }).success).toBe(true);
+  });
+
+  test("accepts a pre-confirmation urgent branch only after guidance was displayed", () => {
+    const urgent = {
+      preferredLanguage: "Spanish" as const,
+      chiefComplaint: "Tengo presión en el pecho y me falta el aire.",
+      safetyRuleId: "chest-pain-with-dyspnea" as const,
+      guidanceDisplayed: true as const,
+    };
+    expect(UrgentIntakeSchema.safeParse(urgent).success).toBe(true);
+    expect(RunInputSchema.safeParse({ scenarioId: "maya-previsit", urgentIntake: urgent }).success).toBe(true);
+    expect(UrgentIntakeSchema.safeParse({ ...urgent, guidanceDisplayed: false }).success).toBe(false);
+  });
+
+  test("rejects ambiguous submissions containing both routine and urgent intake", () => {
+    const urgent = {
+      preferredLanguage: "Spanish" as const,
+      chiefComplaint: "Tengo presión en el pecho y me falta el aire.",
+      safetyRuleId: "chest-pain-with-dyspnea" as const,
+      guidanceDisplayed: true as const,
+    };
+    expect(RunInputSchema.safeParse({ scenarioId: "maya-previsit", intake: valid, urgentIntake: urgent }).success).toBe(false);
+  });
+});
+
+describe("deterministic intake safety gate", () => {
+  test.each([
+    ["English", "I have chest pressure and shortness of breath since this morning."],
+    ["Spanish", "Siento presión en el pecho y me falta el aire desde esta mañana."],
+    ["Tagalog", "May paninikip ng dibdib ako at hirap huminga mula kaninang umaga."],
+  ])("escalates active chest symptoms with dyspnea in %s", (_language, text) => {
+    expect(evaluateIntakeSafety(text)).toMatchObject({
+      branch: "escalated",
+      ruleId: "chest-pain-with-dyspnea",
+    });
+  });
+
+  test("requires the cardiopulmonary combination", () => {
+    expect(evaluateIntakeSafety("I have chest pressure but I am breathing normally.")).toEqual({ branch: "standard" });
+    expect(evaluateIntakeSafety("I am short of breath but have no chest pain.")).toEqual({ branch: "standard" });
+  });
+
+  test("escalates when a red-flag combination is completed in clarification", () => {
+    const complaint = "Masakit ang dibdib ko.";
+    const clarification = "Hirap din akong huminga.";
+    expect(evaluateIntakeSafety(complaint)).toEqual({ branch: "standard" });
+    expect(evaluateIntakeSafety(`${complaint} ${clarification}`)).toMatchObject({
+      branch: "escalated",
+      ruleId: "chest-pain-with-dyspnea",
+    });
+  });
+
+  test.each([
+    ["English", "My face is drooping and my speech is slurred."],
+    ["Spanish", "Tengo debilidad de un lado y habla arrastrada."],
+    ["Tagalog", "Biglang tabingi ang mukha ko at bulol magsalita."],
+  ])("escalates specific stroke signs in %s", (_language, text) => {
+    expect(evaluateIntakeSafety(text)).toMatchObject({ branch: "escalated", ruleId: "stroke-signs" });
+  });
+
+  test.each([
+    ["English", "The wound will not stop bleeding."],
+    ["Spanish", "La herida no para de sangrar."],
+    ["Tagalog", "Hindi tumitigil ang pagdurugo ng sugat."],
+  ])("escalates severe bleeding in %s", (_language, text) => {
+    expect(evaluateIntakeSafety(text)).toMatchObject({ branch: "escalated", ruleId: "severe-bleeding" });
+  });
+
+  test.each([
+    ["English", "I want to kill myself."],
+    ["Spanish", "Quiero matarme."],
+    ["Tagalog", "Gusto kong magpakamatay."],
+  ])("escalates self-harm language in %s", (_language, text) => {
+    expect(evaluateIntakeSafety(text)).toMatchObject({ branch: "escalated", ruleId: "self-harm" });
+  });
+
+  test("does not escalate negated symptoms", () => {
+    expect(evaluateIntakeSafety("I do not have chest pain or shortness of breath.")).toEqual({ branch: "standard" });
+    expect(evaluateIntakeSafety("No tengo dolor de pecho ni falta de aire.")).toEqual({ branch: "standard" });
+    expect(evaluateIntakeSafety("Wala akong sakit sa dibdib o hirap huminga.")).toEqual({ branch: "standard" });
+    expect(evaluateIntakeSafety("I am not thinking about suicide.")).toEqual({ branch: "standard" });
+  });
+
+  test("does not escalate clearly historical or resolved symptoms", () => {
+    expect(evaluateIntakeSafety("I had chest pain and shortness of breath last year, but it resolved.")).toEqual({
+      branch: "standard",
+    });
+    expect(evaluateIntakeSafety("Antecedente de dolor de pecho y falta de aire; ya pasó.")).toEqual({
+      branch: "standard",
+    });
+  });
+
+  test("the red-flag replay is classified by the same deterministic evaluator", () => {
+    const fixtureText = getScenario("luis-escalation").conversation
+      .filter((message) => message.speaker === "patient")
+      .map((message) => message.text)
+      .join(" ");
+    expect(evaluateIntakeSafety(fixtureText)).toMatchObject({
+      branch: "escalated",
+      ruleId: "chest-pain-with-dyspnea",
+    });
+  });
+});
+
+describe("intake interpretation guard", () => {
+  const request = {
+    preferredLanguage: "Tagalog" as const,
+    chiefComplaint: "Masakit ang ulo ko ngayon. Parang wala na akong marinig.",
+    clarificationQuestion: "Maaari mo bang ilarawan ito sa ibang salita?",
+    clarificationResponse: "Parang may bumubugbog sa ulo ko.",
+  };
+
+  test("accepts a bounded English interpretation that differs from the source", () => {
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: "Masakit ang ulo ngayon at parang wala nang marinig; parang may bumubugbog sa ulo.",
+      englishInterpretation: "The patient reports a current headache, reduced hearing, and a sensation as if someone were hitting their head.",
+      confidence: "medium",
+      ambiguities: ["It is unclear whether hearing is completely absent or reduced."],
+    });
+    expect(interpretationValidationError(request, interpretation)).toBeNull();
+  });
+
+  test("rejects source-language text presented as an English interpretation", () => {
+    const interpretation = IntakeInterpretationSchema.parse({
+      patientInterpretation: request.chiefComplaint,
+      englishInterpretation: `Patient report in Tagalog: ${request.chiefComplaint}`,
+      confidence: "low",
+      ambiguities: [],
+    });
+    expect(interpretationValidationError(request, interpretation)).toContain("source-language");
+  });
+
+  test("does not allow a model-generated high-confidence translation", () => {
+    expect(IntakeInterpretationSchema.safeParse({
+      patientInterpretation: "Masakit ang ulo.",
+      englishInterpretation: "The patient has a headache.",
+      confidence: "high",
+      ambiguities: [],
+    }).success).toBe(false);
+  });
+});

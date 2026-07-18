@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BadgeCheck,
   BookOpenCheck,
-  Bot,
   Check,
   ChevronRight,
   CircleAlert,
@@ -25,6 +24,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/components/patient-intake";
 import { getScenario, type DemoScenario } from "@/lib/demo/fixtures";
 import type { CompiledSkill } from "@/lib/skills/compiler";
 import type { RunResult } from "@/lib/workflow/contracts";
@@ -59,7 +59,9 @@ function createNote(result: RunResult): string {
     result.handoff.summary,
     "",
     "VISIT AGENDA",
-    ...result.handoff.agenda.map((item) => `- ${item}`),
+    ...result.handoff.agenda.map(
+      (item) => `- ${item.label}\n  Rationale: ${item.rationale}\n  Evidence: ${item.evidenceIds.join(", ")}`,
+    ),
     ...(result.handoff.discrepancies.length
       ? ["", "DISCREPANCIES TO RECONCILE", ...result.handoff.discrepancies.map((item) => `- ${item}`)]
       : []),
@@ -87,6 +89,7 @@ export function BehemothStudio() {
   const [receipt, setReceipt] = useState<string | null>(null);
   const [compiled, setCompiled] = useState<CompiledSkill | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [intakeKey, setIntakeKey] = useState(0);
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
 
   useEffect(() => {
@@ -117,11 +120,12 @@ export function BehemothStudio() {
     setReceipt(null);
     setCompiled(null);
     setError(null);
+    setIntakeKey((current) => current + 1);
   };
 
-  const runWorkflow = async () => {
+  const runWorkflow = async (intake?: ConfirmedIntake, urgentIntake?: UrgentIntake) => {
     setPhase("running");
-    setActiveStep(0);
+    setActiveStep(urgentIntake ? 2 : intake ? 1 : 0);
     setRun(null);
     setReceipt(null);
     setCompiled(null);
@@ -133,24 +137,36 @@ export function BehemothStudio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           scenarioId,
-          preferLiveAthena: Boolean(status?.connected),
+          preferLiveAthena: Boolean(status?.connected) && scenarioId === "maya-previsit",
           preferLiveModel: true,
+          intake,
+          urgentIntake,
         }),
       });
 
-      const stopAt = scenarioId === "luis-escalation" ? 2 : 4;
-      for (let index = 1; index <= stopAt; index += 1) {
-        await delay(480);
-        setActiveStep(index);
+      if (!urgentIntake) {
+        for (let index = intake ? 2 : 1; index <= 2; index += 1) {
+          await delay(480);
+          setActiveStep(index);
+        }
       }
       const response = await runRequest;
       if (!response.ok) throw new Error("The workflow run could not be completed.");
       const result = (await response.json()) as RunResult;
+      if (result.execution.safetyBranch === "standard") {
+        for (let index = 3; index <= 4; index += 1) {
+          await delay(360);
+          setActiveStep(index);
+        }
+      } else {
+        setActiveStep(4);
+      }
       setRun(result);
       setPhase("review");
     } catch (caught) {
       setPhase("idle");
       setActiveStep(-1);
+      if (intake) setIntakeKey((current) => current + 1);
       setError(caught instanceof Error ? caught.message : "The workflow run failed.");
     }
   };
@@ -158,6 +174,13 @@ export function BehemothStudio() {
   const approveRun = async () => {
     if (!run) return;
     setError(null);
+    if (run.execution.safetyBranch === "escalated") {
+      setRun({ ...run, approval: { required: true, status: "approved" } });
+      setReceipt("Escalation acknowledged by clinician. No Athena write was attempted.");
+      setActiveStep(4);
+      setPhase("approved");
+      return;
+    }
     try {
       const response = await fetch("/api/writeback", {
         method: "POST",
@@ -166,6 +189,7 @@ export function BehemothStudio() {
           runId: run.runId,
           approved: true,
           actorRole: "clinician",
+          appointmentId: run.patient.appointmentId,
           noteText: createNote(run),
         }),
       });
@@ -204,6 +228,23 @@ export function BehemothStudio() {
   const reset = () => selectScenario(scenarioId);
   const currentHandoff = run?.handoff;
   const isEscalation = currentHandoff?.disposition !== "clinician-review" && Boolean(currentHandoff);
+  const displayedPatient = run?.patient ?? scenario.patient;
+  const displayedInitials = run
+    ? run.patient.displayName.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()
+    : scenario.patient.initials;
+
+  const focusPatientIntake = () => {
+    setActiveStep(0);
+    const target = document.getElementById("patient-intake");
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const focusClinicianHandoff = () => {
+    const target = document.getElementById("clinician-handoff");
+    target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   return (
     <main className="app-shell">
@@ -239,8 +280,14 @@ export function BehemothStudio() {
               <RotateCcw size={15} /> Reset
             </button>
           )}
-          <button className="button button-primary" onClick={() => void runWorkflow()} disabled={phase === "running"}>
-            {phase === "running" ? <><span className="spinner" /> Running workflow</> : <><Play size={15} fill="currentColor" /> Run golden path</>}
+          <button
+            className="button button-primary"
+            onClick={() => run ? focusClinicianHandoff() : scenarioId === "luis-escalation" ? void runWorkflow() : focusPatientIntake()}
+            disabled={phase === "running"}
+          >
+            {phase === "running"
+              ? <><span className="spinner" /> Running workflow</>
+              : <><Play size={15} fill="currentColor" /> {run ? "Review handoff" : scenarioId === "luis-escalation" ? "Run safety replay" : "Start patient intake"}</>}
           </button>
         </div>
       </section>
@@ -258,11 +305,10 @@ export function BehemothStudio() {
             const Icon = step.icon;
             const complete = activeStep > index || (phase === "compiled" && index === 5);
             const active = activeStep === index;
-            const skipped = scenarioId === "luis-escalation" && run && index > 2 && index < 4;
             return (
-              <div className={`workflow-step ${complete ? "is-complete" : ""} ${active ? "is-active" : ""} ${skipped ? "is-skipped" : ""}`} key={step.label}>
+              <div className={`workflow-step ${complete ? "is-complete" : ""} ${active ? "is-active" : ""}`} key={step.label}>
                 <div className="step-node">{complete ? <Check size={15} /> : <Icon size={15} />}</div>
-                <div><strong>{step.label}</strong><span>{skipped ? "safely bypassed" : step.detail}</span></div>
+                <div><strong>{step.label}</strong><span>{step.detail}</span></div>
                 {index < workflowSteps.length - 1 && <ChevronRight className="step-arrow" size={15} />}
               </div>
             );
@@ -280,31 +326,57 @@ export function BehemothStudio() {
               <h2>Adaptive intake</h2>
             </div>
             <div className="scenario-switch" aria-label="Demo scenario">
-              <button className={scenarioId === "maya-previsit" ? "selected" : ""} onClick={() => selectScenario("maya-previsit")}>Standard</button>
-              <button className={scenarioId === "luis-escalation" ? "selected" : ""} onClick={() => selectScenario("luis-escalation")}>Red flag</button>
+              <button
+                className={scenarioId === "maya-previsit" ? "selected" : ""}
+                onClick={() => selectScenario("maya-previsit")}
+                aria-pressed={scenarioId === "maya-previsit"}
+                disabled={phase === "running"}
+              >
+                Standard
+              </button>
+              <button
+                className={scenarioId === "luis-escalation" ? "selected" : ""}
+                onClick={() => selectScenario("luis-escalation")}
+                aria-pressed={scenarioId === "luis-escalation"}
+                disabled={phase === "running"}
+              >
+                Red flag
+              </button>
             </div>
           </div>
 
           <div className="patient-banner">
-            <div className="avatar">{scenario.patient.initials}</div>
-            <div className="patient-meta"><strong>{scenario.patient.displayName}</strong><span>{scenario.patient.age} · {scenario.patient.language} preferred</span></div>
-            <div className="appointment-meta"><span>Upcoming</span><strong>{scenario.patient.appointment}</strong></div>
+            <div className="avatar">{displayedInitials}</div>
+            <div className="patient-meta">
+              <strong>{displayedPatient.displayName}</strong>
+              <span>{displayedPatient.age} · {displayedPatient.language} preferred{run?.patient.identitySource === "athena" ? " · Athena linked" : ""}</span>
+            </div>
+            <div className="appointment-meta"><span>Upcoming</span><strong>{displayedPatient.appointment}</strong></div>
           </div>
 
-          <div className="conversation-stream">
-            {scenario.conversation.map((message, index) => {
-              const visible = phase === "idle" || activeStep >= Math.min(index, 1) || run;
-              return (
-                <div className={`message-row ${message.speaker} ${visible ? "is-visible" : ""}`} key={`${message.speaker}-${index}`}>
-                  <div className="message-avatar">{message.speaker === "behemoth" ? <Bot size={15} /> : scenario.patient.initials}</div>
-                  <div className="message-bubble">
-                    <div className="message-speaker">{message.speaker === "behemoth" ? "Behemoth" : scenario.patient.displayName.split(" ")[0]}</div>
-                    <p>{message.text}</p>
-                    {message.translated && <div className="translation"><Languages size={12} /> {message.translated}</div>}
+          <div id="patient-intake" tabIndex={-1}>
+            {scenarioId === "maya-previsit" ? (
+              <PatientIntake
+                key={`${scenarioId}-${intakeKey}`}
+                patientName={displayedPatient.displayName.split(" ")[0]}
+                patientInitials={displayedInitials}
+                disabled={phase === "running" || Boolean(run)}
+                onConfirmed={(intake) => void runWorkflow(intake)}
+                onUrgent={(urgentIntake) => void runWorkflow(undefined, urgentIntake)}
+              />
+            ) : (
+              <div className="conversation-stream">
+                {scenario.conversation.map((message, index) => (
+                  <div className="message-row is-visible" key={`${message.speaker}-${index}`}>
+                    <div className="message-bubble">
+                      <div className="message-speaker">{message.speaker === "behemoth" ? "Behemoth safety policy" : scenario.patient.displayName}</div>
+                      <p>{message.text}</p>
+                      {message.translated && <div className="translation"><Languages size={12} /> {message.translated}</div>}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="channel-footer">
@@ -313,7 +385,11 @@ export function BehemothStudio() {
           </div>
         </article>
 
-        <article className={`panel handoff-panel ${isEscalation ? "is-escalation" : ""}`}>
+        <article
+          id="clinician-handoff"
+          className={`panel handoff-panel ${isEscalation ? "is-escalation" : ""}`}
+          tabIndex={-1}
+        >
           <div className="panel-header">
             <div>
               <div className="panel-kicker">Clinician channel</div>
@@ -347,14 +423,35 @@ export function BehemothStudio() {
                   <Cloud size={12} /> Athena · {run.execution.athena === "partial" ? "live / partial" : run.execution.athena}
                 </span>
                 <span className={run.execution.model === "live" ? "live" : "fallback"}>
-                  <Sparkles size={12} /> Claude · {run.execution.model}
+                  <Sparkles size={12} /> {isEscalation ? "Model · bypassed" : `Claude · ${run.execution.model}`}
                 </span>
                 <span className="live"><ShieldCheck size={12} /> Safety · deterministic</span>
               </div>
 
               <div className="handoff-section">
                 <h4>Visit agenda</h4>
-                <ol>{currentHandoff.agenda.map((item) => <li key={item}><span>{currentHandoff.agenda.indexOf(item) + 1}</span>{item}</li>)}</ol>
+                <ol>
+                  {currentHandoff.agenda.map((item, index) => (
+                    <li key={`${item.label}-${index}`}>
+                      <span className="agenda-number">{index + 1}</span>
+                      <div className="agenda-item-copy">
+                        <strong>{item.label}</strong>
+                        <p>{item.rationale}</p>
+                        <div className="agenda-support" aria-label="Supporting evidence">
+                          {item.evidenceIds.map((evidenceId) => {
+                            const evidence = run.evidence.find((candidate) => candidate.id === evidenceId);
+                            return (
+                              <div className="agenda-evidence" key={evidenceId} title={evidenceId}>
+                                {evidence ? <SourcePill source={evidence.source} /> : null}
+                                <small>{evidence?.value ?? evidenceId}</small>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </div>
 
               {currentHandoff.discrepancies.length > 0 && (
@@ -366,7 +463,7 @@ export function BehemothStudio() {
 
               <div className="evidence-list">
                 <div className="section-label">Evidence ledger</div>
-                {run.evidence.slice(0, 4).map((item) => (
+                {run.evidence.slice(0, 6).map((item) => (
                   <div className="evidence-row" key={item.id}>
                     <SourcePill source={item.source} />
                     <div><strong>{item.value}</strong><span>{item.resource ?? item.label}{item.observedAt ? ` · ${item.observedAt}` : ""}</span></div>
@@ -381,7 +478,7 @@ export function BehemothStudio() {
                 </div>
                 {run.approval.status === "pending" ? (
                   <button className="button button-approve" onClick={() => void approveRun()}>
-                    <UserRoundCheck size={15} /> Approve handoff
+                    <UserRoundCheck size={15} /> {isEscalation ? "Acknowledge escalation" : "Approve handoff"}
                   </button>
                 ) : (
                   <button className="button button-compile" onClick={() => void compileSkill()} disabled={phase === "compiled"}>

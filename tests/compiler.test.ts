@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { getScenario } from "../src/lib/demo/fixtures";
+import { getScenario, scenarios } from "../src/lib/demo/fixtures";
 import { compileRunToSkill } from "../src/lib/skills/compiler";
-import type { RunResult } from "../src/lib/workflow/contracts";
+import { HandoffSchema, type RunResult } from "../src/lib/workflow/contracts";
 
 const scenario = getScenario("maya-previsit");
 const run: RunResult = {
@@ -31,5 +31,31 @@ describe("skill compiler", () => {
     const skill = compiled.files[0]?.content ?? "";
     expect(skill).toContain("approval");
     expect(skill).toContain("medication reconciliation first");
+    expect(skill).toContain("one to three evidence IDs");
+    const goldenTrace = JSON.parse(compiled.files.find((file) => file.path === "references/golden-trace.json")?.content ?? "{}") as {
+      expected?: { agenda?: Array<{ label: string; evidenceIds: string[] }> };
+    };
+    expect(goldenTrace.expected?.agenda?.[0]?.evidenceIds).toEqual(scenario.handoff.agenda[0]?.evidenceIds);
+  });
+
+  test("rejects agenda evidence that is absent from global handoff evidence", () => {
+    const invalid = {
+      ...scenario.handoff,
+      agenda: [{ ...scenario.handoff.agenda[0], evidenceIds: ["not-in-global-evidence"] }],
+    };
+    expect(HandoffSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  test("keeps every fixture agenda citation within supplied and global evidence", () => {
+    for (const fixture of Object.values(scenarios)) {
+      expect(HandoffSchema.safeParse(fixture.handoff).success).toBe(true);
+      const supplied = new Set(fixture.evidence.map((item) => item.id));
+      const global = new Set(fixture.handoff.evidenceIds);
+      for (const item of fixture.handoff.agenda) {
+        expect(item.evidenceIds.length).toBeGreaterThanOrEqual(1);
+        expect(item.evidenceIds.length).toBeLessThanOrEqual(3);
+        expect(item.evidenceIds.every((id) => supplied.has(id) && global.has(id))).toBe(true);
+      }
+    }
   });
 });
