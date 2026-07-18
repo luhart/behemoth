@@ -52,6 +52,64 @@ describe("confirmed intake contract", () => {
     expect(parsed.topConcernId).toBe("hearing");
   });
 
+  test("preserves the persistent foot-pain example as four attributed concerns", () => {
+    const parsed = ConfirmedIntakeSchema.parse({
+      preferredLanguage: "Tagalog",
+      chiefComplaint:
+        "Doc, anim na buwan na pong masakit ang kaliwa kong paa, at parang hindi po gumagana ang gamot ko. Lagi pong sinasabi ng doktor na arthritis ito dahil masakit tuwing umaga, pero hindi naman po gumagaling. Napansin ko po na mas masakit siya tuwing kumakain ako ng baboy.",
+      clarificationQuestion:
+        "Saan nagsisimula ang sakit, at paano mo ilalarawan ang sakit kapag pinakamalala?",
+      clarificationResponse:
+        "Oo, matalas at matinding sakit po ito sa mga binti ko pero nagsisimula sa hinlalaki ng paa ko.",
+      nativeInterpretation:
+        "Anim na buwan nang masakit ang kaliwang paa. Pakiramdam ng pasyente ay hindi nakatutulong ang gamot. Sinabi raw ng doktor na arthritis dahil masakit sa umaga, ngunit hindi gumagaling. Napapansin niyang mas sumasakit pagkatapos kumain ng baboy. Matalas at matindi ang sakit sa mga binti at nagsisimula sa hinlalaki ng paa.",
+      englishInterpretation:
+        "Left foot pain for six months; the patient feels the current medication is not helping. A previous doctor has called it arthritis because it hurts in the morning, but it has not improved. The patient reports worse pain after eating pork. The pain is sharp and severe in the legs and starts at the big toe.",
+      interpretationMethod: "deterministic",
+      ambiguities: [
+        "The medication name, dose, adherence, and indication are not specified.",
+        "The extent and timing of pain described as involving the legs but starting at the big toe require clinician clarification.",
+        "Worsening after eating pork is a patient-observed association and is not presented as a confirmed cause.",
+      ],
+      interpretationConfirmed: true,
+      confidence: "medium",
+      confirmedConcerns: [
+        {
+          id: "foot-pain",
+          nativeSummary: "Anim na buwang matalas at matinding sakit sa kaliwang paa na nagsisimula sa hinlalaki",
+          englishSummary: "Six months of sharp, severe left-foot pain starting at the big toe",
+          mentionOrder: 1,
+        },
+        {
+          id: "medication-effect",
+          nativeSummary: "Pakiramdam na hindi nakatutulong ang kasalukuyang gamot",
+          englishSummary: "Concern that the current medication is not helping",
+          mentionOrder: 2,
+        },
+        {
+          id: "prior-arthritis",
+          nativeSummary: "Naunang paliwanag na arthritis ngunit hindi gumagaling ang sakit",
+          englishSummary: "Prior arthritis explanation with persistent symptoms",
+          mentionOrder: 3,
+        },
+        {
+          id: "pork-association",
+          nativeSummary: "Napapansing mas sumasakit pagkatapos kumain ng baboy",
+          englishSummary: "Patient-observed worsening after eating pork",
+          mentionOrder: 4,
+        },
+      ],
+      topConcernId: "foot-pain",
+      priorityConfirmed: true,
+    });
+
+    expect(parsed.confirmedConcerns).toHaveLength(4);
+    expect(parsed.confirmedConcerns?.[2]?.englishSummary).toStartWith("Prior arthritis explanation");
+    expect(parsed.confirmedConcerns?.[3]?.englishSummary).toStartWith("Patient-observed");
+    expect(parsed.ambiguities?.[0]).toContain("medication name");
+    expect(evaluateIntakeSafety(`${parsed.chiefComplaint} ${parsed.clarificationResponse}`)).toEqual({ branch: "standard" });
+  });
+
   test("accepts an explicit no-preference priority confirmation", () => {
     const parsed = ConfirmedIntakeSchema.safeParse({
       ...valid,

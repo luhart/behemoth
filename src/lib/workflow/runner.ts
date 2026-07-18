@@ -416,6 +416,7 @@ function buildEvidenceLinkedFallback(input: {
     "patient-clarification",
     "patient-confirmed-interpretation",
   ].filter((id) => patientEvidenceIds.includes(id));
+  const priorityEvidenceIds = patientEvidenceIds.filter((id) => id.startsWith("patient-priority-"));
   const headacheAgenda: AgendaItem | undefined = /headache|head pain|pounding.{0,20}head|masakit ang ulo|bugbog.{0,20}ulo|dolor de cabeza/.test(normalizedReport)
     ? {
         label: "Clarify the headache character, onset, severity, and associated symptoms",
@@ -428,6 +429,36 @@ function buildEvidenceLinkedFallback(input: {
         label: "Assess the reported hearing change and its timeline",
         rationale: "The patient may be reporting hearing loss or another hearing change, but onset, laterality, duration, and associated ear symptoms are not established.",
         evidenceIds: pickAgendaEvidence(input.evidence, symptomEvidenceIds),
+      }
+    : undefined;
+  const footPainAgenda: AgendaItem | undefined = /left foot|big toe|great toe|kaliwang paa|hinlalaki ng paa|dolor.{0,20}pie|dedo gordo/.test(normalizedReport)
+    ? {
+        label: "Characterize the persistent foot pain and reported big-toe onset",
+        rationale: "The patient reports six months of sharp, severe left-foot or leg pain starting at the big toe; exact distribution, flare pattern, exam findings, and functional impact remain unknown.",
+        evidenceIds: pickAgendaEvidence(input.evidence, [
+          ...priorityEvidenceIds.slice(0, 1),
+          ...symptomEvidenceIds,
+        ]),
+      }
+    : undefined;
+  const ineffectiveMedicationAgenda: AgendaItem | undefined = /medication.{0,30}(not helping|not working)|medicine.{0,30}(not helping|not working)|gamot.{0,30}(hindi|di).{0,20}(gumagana|tumutulong)|hindi nakatutulong ang gamot/.test(normalizedReport)
+    ? {
+        label: "Identify the medication the patient says is not helping",
+        rationale: "The patient reports inadequate benefit, but the medication name, dose, indication, adherence, and prescribing history are not established; verify them before reconciliation or any medication decision.",
+        evidenceIds: pickAgendaEvidence(input.evidence, [
+          ...priorityEvidenceIds.slice(1, 2),
+          ...symptomEvidenceIds,
+        ]),
+      }
+    : undefined;
+  const priorArthritisAgenda: AgendaItem | undefined = /arthritis/.test(normalizedReport) && /not improved|not getting better|hindi.{0,20}gumagaling|no mejora/.test(normalizedReport)
+    ? {
+        label: "Review the prior arthritis assessment and persistent symptoms",
+        rationale: "The patient reports that a previous clinician used an arthritis explanation because of morning pain, while symptoms have continued without improvement; preserve that history without treating it as a confirmed diagnosis here.",
+        evidenceIds: pickAgendaEvidence(input.evidence, [
+          ...priorityEvidenceIds.slice(2, 3),
+          ...symptomEvidenceIds,
+        ]),
       }
     : undefined;
   const bloodPressureFacts = athenaFacts.filter((item) =>
@@ -465,6 +496,9 @@ function buildEvidenceLinkedFallback(input: {
       interpretationAgenda,
       ...(headacheAgenda ? [headacheAgenda] : []),
       ...(hearingAgenda ? [hearingAgenda] : []),
+      ...(footPainAgenda ? [footPainAgenda] : []),
+      ...(ineffectiveMedicationAgenda ? [ineffectiveMedicationAgenda] : []),
+      ...(priorArthritisAgenda ? [priorArthritisAgenda] : []),
       ...(bloodPressureAgenda ? [bloodPressureAgenda] : []),
       ...(medicationAgenda ? [medicationAgenda] : []),
     ].slice(0, 5),

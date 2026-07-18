@@ -29,6 +29,20 @@ type PreferredLanguage = ConfirmedIntake["preferredLanguage"];
 type InterpretationStatus = "idle" | "loading" | "ready" | "error";
 type GeneratedInterpretation = IntakeInterpretation & { model: string };
 
+type AlternateDemo = {
+  buttonLabel: string;
+  complaint: string;
+  clarificationQuestion: string;
+  clarificationQuestionEnglish: string;
+  clarificationPlaceholder: string;
+  clarification: string;
+  patientInterpretation: string;
+  englishInterpretation: string;
+  visitTopics: Array<{ nativeSummary: string; englishSummary: string }>;
+  confidence: "medium" | "high";
+  ambiguities: string[];
+};
+
 type IntakeScript = {
   code: "tl" | "es";
   nativeLabel: string;
@@ -50,6 +64,7 @@ type IntakeScript = {
   demoPatientInterpretation: string;
   demoEnglishInterpretation: string;
   demoVisitTopics: Array<{ nativeSummary: string; englishSummary: string }>;
+  alternateDemo?: AlternateDemo;
   confirmLabel: string;
   controls: {
     changeLanguage: string;
@@ -104,6 +119,45 @@ const scripts: Record<PreferredLanguage, IntakeScript> = {
         englishSummary: "Morning dizziness and stopping the blood-pressure medication",
       },
     ],
+    alternateDemo: {
+      buttonLabel: "Halimbawa: pananakit ng paa",
+      complaint:
+        "Doc, anim na buwan na pong masakit ang kaliwa kong paa, at parang hindi po gumagana ang gamot ko. Lagi pong sinasabi ng doktor na arthritis ito dahil masakit tuwing umaga, pero hindi naman po gumagaling. Napansin ko po na mas masakit siya tuwing kumakain ako ng baboy.",
+      clarificationQuestion:
+        "Saan nagsisimula ang sakit, at paano mo ilalarawan ang sakit kapag pinakamalala?",
+      clarificationQuestionEnglish:
+        "Where does the pain start, and how would you describe it when it is at its worst?",
+      clarificationPlaceholder: "Sabihin kung saan nagsisimula at kung matalas, mahapdi, pumipintig, o iba…",
+      clarification: "Oo, matalas at matinding sakit po ito sa mga binti ko pero nagsisimula sa hinlalaki ng paa ko.",
+      patientInterpretation:
+        "Anim na buwan nang masakit ang kaliwang paa. Pakiramdam ng pasyente ay hindi nakatutulong ang gamot. Sinabi raw ng doktor na arthritis dahil masakit sa umaga, ngunit hindi gumagaling. Napapansin niyang mas sumasakit pagkatapos kumain ng baboy. Matalas at matindi ang sakit sa mga binti at nagsisimula sa hinlalaki ng paa.",
+      englishInterpretation:
+        "Left foot pain for six months; the patient feels the current medication is not helping. A previous doctor has called it arthritis because it hurts in the morning, but it has not improved. The patient reports worse pain after eating pork. The pain is sharp and severe in the legs and starts at the big toe.",
+      visitTopics: [
+        {
+          nativeSummary: "Anim na buwang matalas at matinding sakit sa kaliwang paa na nagsisimula sa hinlalaki",
+          englishSummary: "Six months of sharp, severe left-foot pain starting at the big toe",
+        },
+        {
+          nativeSummary: "Pakiramdam na hindi nakatutulong ang kasalukuyang gamot",
+          englishSummary: "Concern that the current medication is not helping",
+        },
+        {
+          nativeSummary: "Naunang paliwanag na arthritis ngunit hindi gumagaling ang sakit",
+          englishSummary: "Prior arthritis explanation with persistent symptoms",
+        },
+        {
+          nativeSummary: "Napapansing mas sumasakit pagkatapos kumain ng baboy",
+          englishSummary: "Patient-observed worsening after eating pork",
+        },
+      ],
+      confidence: "medium",
+      ambiguities: [
+        "The medication name, dose, adherence, and indication are not specified.",
+        "The extent and timing of pain described as involving the legs but starting at the big toe require clinician clarification.",
+        "Worsening after eating pork is a patient-observed association and is not presented as a confirmed cause.",
+      ],
+    },
     confirmLabel: "Oo, tama ito",
     controls: {
       changeLanguage: "Palitan ang wika",
@@ -265,8 +319,37 @@ export function PatientIntake({
     stage === "language" ? "Language" : stage === "complaint" ? "Symptoms" : stage === "clarification" ? "Clarify" : "Confirm",
   );
 
+  const demoForComplaint = useMemo(() => {
+    if (!script) return null;
+    if (normalize(chiefComplaint) === normalize(script.demoComplaint)) {
+      return {
+        buttonLabel: script.controls.useDemo,
+        clarificationQuestion: script.clarificationQuestion,
+        clarificationQuestionEnglish: script.clarificationQuestionEnglish,
+        clarificationPlaceholder: script.clarificationPlaceholder,
+        clarification: script.demoClarification,
+        patientInterpretation: script.demoPatientInterpretation,
+        englishInterpretation: script.demoEnglishInterpretation,
+        visitTopics: script.demoVisitTopics,
+        confidence: "high" as const,
+        ambiguities: [] as string[],
+      };
+    }
+    if (script.alternateDemo && normalize(chiefComplaint) === normalize(script.alternateDemo.complaint)) {
+      return script.alternateDemo;
+    }
+    return null;
+  }, [chiefComplaint, script]);
+
   const clarification = useMemo(() => {
     if (!script || !preferredLanguage) return null;
+    if (demoForComplaint) {
+      return {
+        question: demoForComplaint.clarificationQuestion,
+        questionEnglish: demoForComplaint.clarificationQuestionEnglish,
+        placeholder: demoForComplaint.clarificationPlaceholder,
+      };
+    }
     const normalizedComplaint = normalize(chiefComplaint);
     const matchesKnownNuance = preferredLanguage === "Tagalog"
       ? normalizedComplaint.includes("kumikirot")
@@ -289,23 +372,22 @@ export function PatientIntake({
           questionEnglish: "Can you describe in different words where it is and what it feels like?",
           placeholder: "Describa el lugar y la sensación con otras palabras…",
         };
-  }, [chiefComplaint, preferredLanguage, script]);
+  }, [chiefComplaint, demoForComplaint, preferredLanguage, script]);
 
-  const isDemoResponse = Boolean(
-    script
-    && normalize(chiefComplaint) === normalize(script.demoComplaint)
-    && normalize(clarificationResponse) === normalize(script.demoClarification),
-  );
+  const matchedDemo = demoForComplaint && normalize(clarificationResponse) === normalize(demoForComplaint.clarification)
+    ? demoForComplaint
+    : null;
+  const isDemoResponse = Boolean(matchedDemo);
 
   const interpretation = useMemo(() => {
     if (!script || !preferredLanguage) return null;
-    if (isDemoResponse) {
+    if (matchedDemo) {
       return {
-        patient: script.demoPatientInterpretation,
-        english: script.demoEnglishInterpretation,
-        confidence: "high" as const,
-        ambiguities: [] as string[],
-        visitTopics: script.demoVisitTopics,
+        patient: matchedDemo.patientInterpretation,
+        english: matchedDemo.englishInterpretation,
+        confidence: matchedDemo.confidence,
+        ambiguities: matchedDemo.ambiguities,
+        visitTopics: matchedDemo.visitTopics,
         method: "deterministic" as const,
         model: "Golden-path fixture",
       };
@@ -320,7 +402,7 @@ export function PatientIntake({
       method: "sonnet" as const,
       model: generatedInterpretation.model,
     };
-  }, [generatedInterpretation, isDemoResponse, preferredLanguage, script]);
+  }, [generatedInterpretation, matchedDemo, preferredLanguage, script]);
 
   const resetGeneratedInterpretation = () => {
     interpretationAbortRef.current?.abort();
@@ -564,12 +646,24 @@ export function PatientIntake({
                   lang={script.code}
                 />
                 <div className="intake-composer-actions">
-                  <button className="intake-demo-fill" type="button" onClick={() => {
-                    resetGeneratedInterpretation();
-                    setChiefComplaint(script.demoComplaint);
-                  }} disabled={disabled}>
-                    <Sparkles size={13} aria-hidden="true" /> {script.controls.useDemo}
-                  </button>
+                  <div className="intake-demo-options">
+                    <button className="intake-demo-fill" type="button" onClick={() => {
+                      resetGeneratedInterpretation();
+                      setClarificationResponse("");
+                      setChiefComplaint(script.demoComplaint);
+                    }} disabled={disabled}>
+                      <Sparkles size={13} aria-hidden="true" /> {script.controls.useDemo}
+                    </button>
+                    {script.alternateDemo ? (
+                      <button className="intake-demo-fill" type="button" onClick={() => {
+                        resetGeneratedInterpretation();
+                        setClarificationResponse("");
+                        setChiefComplaint(script.alternateDemo?.complaint ?? "");
+                      }} disabled={disabled}>
+                        <Sparkles size={13} aria-hidden="true" /> {script.alternateDemo.buttonLabel}
+                      </button>
+                    ) : null}
+                  </div>
                   <button className="button intake-continue" type="submit" disabled={disabled || chiefComplaint.trim().length < 3}>
                     {script.controls.continue} <Send size={13} aria-hidden="true" />
                   </button>
@@ -665,12 +759,12 @@ export function PatientIntake({
                   </div>
                 ) : null}
                 <div className="intake-composer-actions">
-                  {normalize(chiefComplaint) === normalize(script.demoComplaint) ? (
+                  {demoForComplaint ? (
                     <button className="intake-demo-fill" type="button" onClick={() => {
                       resetGeneratedInterpretation();
-                      setClarificationResponse(script.demoClarification);
+                      setClarificationResponse(demoForComplaint.clarification);
                     }} disabled={disabled || interpretationStatus === "loading"}>
-                      <Sparkles size={13} aria-hidden="true" /> {script.controls.useDemo}
+                      <Sparkles size={13} aria-hidden="true" /> {demoForComplaint.buttonLabel}
                     </button>
                   ) : <span />}
                   <button className="button intake-continue" type="submit" disabled={disabled || interpretationStatus === "loading" || clarificationResponse.trim().length < 2}>

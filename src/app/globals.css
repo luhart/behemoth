@@ -432,6 +432,7 @@ button { font: inherit; }
   justify-content: space-between;
   gap: 9px;
 }
+.intake-demo-options { min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; }
 .intake-demo-fill {
   min-height: 30px;
   padding: 0;

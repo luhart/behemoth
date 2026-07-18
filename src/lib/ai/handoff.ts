@@ -10,6 +10,7 @@ import {
   type Concern,
   type Evidence,
 } from "@/lib/workflow/contracts";
+import { patientAnchoredAgenda } from "@/lib/workflow/handoff-evidence";
 
 export type HandoffGeneration = {
   handoff: ClinicalHandoff;
@@ -47,6 +48,9 @@ export async function generateClinicalHandoff(input: {
       }),
       system: `You prepare a pre-visit handoff, not a diagnosis or treatment plan.
 Preserve the patient's own words. Never infer facts that are not in evidence.
+Describe food, cultural, spiritual, or other patient-observed associations as patient-reported observations; do not promote them to causes, triggers, diagnoses, or etiologies.
+If the patient does not identify a medication or its indication, do not equate it with a medication in the chart or imply that the chart medication causes, treats, or relates to the presenting symptom.
+Agenda rationales may say that a reported symptom warrants evaluation or clarification; never say that a symptom pattern suggests a specific etiology, differential, or replacement diagnosis. Keep prior diagnoses attributed and frame persistence as a reason to review them.
 Call out contradictions instead of resolving them. Keep the agenda to what fits in one visit.
 The supplied concerns may include patientPriority="top". Treat that as the patient's preference, not clinical urgency, and never let it override the deterministic safety disposition.
 When five or fewer confirmed concerns are supplied, keep each one visible in the agenda; you may reorder them for safety or chart reconciliation when the rationale and evidence support doing so.
@@ -90,10 +94,17 @@ Confidence must be no higher than "${input.fallback.confidence}", the determinis
     if (output.disposition !== input.deterministicDisposition) {
       throw new Error("Model attempted to override the deterministic safety disposition.");
     }
+    const agenda = patientAnchoredAgenda(output.agenda, input.evidence);
+    if (agenda.length === 0) {
+      throw new Error("Model returned no agenda item anchored to patient evidence.");
+    }
+    const patientAnchoredOutput = agenda.length === output.agenda.length
+      ? output
+      : HandoffSchema.parse({ ...output, agenda });
     const confidenceRank = { low: 0, medium: 1, high: 2 } as const;
-    const boundedOutput = confidenceRank[output.confidence] > confidenceRank[input.fallback.confidence]
-      ? HandoffSchema.parse({ ...output, confidence: input.fallback.confidence })
-      : output;
+    const boundedOutput = confidenceRank[patientAnchoredOutput.confidence] > confidenceRank[input.fallback.confidence]
+      ? HandoffSchema.parse({ ...patientAnchoredOutput, confidence: input.fallback.confidence })
+      : patientAnchoredOutput;
     return { handoff: boundedOutput, mode: "live" };
   } catch (error) {
     console.warn(

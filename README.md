@@ -21,6 +21,8 @@ Voice intake and text-message delivery, scanned-chart or PDF migration, ICD mapp
 5. Compile the approved trace. The app emits `SKILL.md`, agent UI metadata, a permission policy, and a replayable golden trace.
 6. Switch to the red-flag replay—or type chest pressure with shortness of breath into the Spanish intake. The deterministic policy immediately displays bilingual emergency guidance, bypasses the model, and clinician acknowledgement performs no Athena write.
 
+For a second standard-path replay, choose `Halimbawa: pananakit ng paa`. It captures six months of left-foot pain with big-toe onset, an unspecified medication concern, a prior clinician's arthritis attribution, and a patient-observed food association. The clinician handoff preserves each as a separate cited concern without asserting gout, a medication identity, or a causal dietary trigger.
+
 The golden-path patient interaction and every safety gate remain deterministic. Free-form multilingual intake uses Sonnet for a bounded native-language restatement plus a real English clinician interpretation; model failure stops at the clarification step instead of displaying source-language text as English. Athena and Claude can be enabled independently, and handoff failures degrade to an evidence-linked fallback without swapping in another patient's canned summary.
 
 ## Quick start
