@@ -1,0 +1,4 @@
+interface:
+  display_name: "Adaptive Patient Intake"
+  short_description: "Multilingual, bounded pre-visit intake"
+  default_prompt: "Use $adaptive-patient-intake to turn a patient's concerns into a safe, structured pre-visit agenda."
