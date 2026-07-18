@@ -1,7 +1,7 @@
 import type { ClinicalHandoff, Concern, Evidence } from "@/lib/workflow/contracts";
 
 export type ConversationMessage = {
-  speaker: "behemoth" | "patient";
+  speaker: "cely" | "patient";
   text: string;
   translated?: string;
 };
@@ -35,7 +35,7 @@ export const scenarios: Record<DemoScenario["id"], DemoScenario> = {
     },
     conversation: [
       {
-        speaker: "behemoth",
+        speaker: "cely",
         text: "Kumusta Maya. Bago ang iyong pagbisita, ano ang pinakamahalagang gusto mong talakayin sa iyong doktor?",
         translated: "Before your visit, what is the most important thing you want to discuss with your doctor?",
       },
@@ -45,7 +45,7 @@ export const scenarios: Record<DemoScenario["id"], DemoScenario> = {
         translated: "My right shoulder has been hurting for nearly a month. I also feel dizzy in the mornings, so I stopped my blood-pressure medicine about two weeks ago.",
       },
       {
-        speaker: "behemoth",
+        speaker: "cely",
         text: "Kapag sinabi mong “kumikirot,” alin ang pinakamalapit: paulit-ulit na pananakit, mahapdi o nasusunog, o ibang pakiramdam?",
         translated: "When you say “kumikirot,” which is closest: an intermittent ache, stinging or burning, or a different feeling?",
       },
@@ -141,7 +141,7 @@ export const scenarios: Record<DemoScenario["id"], DemoScenario> = {
     },
     conversation: [
       {
-        speaker: "behemoth",
+        speaker: "cely",
         text: "Hola Luis. ¿Qué le gustaría asegurarse de hablar durante su visita?",
         translated: "What would you like to make sure you discuss during your visit?",
       },
@@ -151,7 +151,7 @@ export const scenarios: Record<DemoScenario["id"], DemoScenario> = {
         translated: "I have chest pressure and shortness of breath since this morning.",
       },
       {
-        speaker: "behemoth",
+        speaker: "cely",
         text: "Esto podría ser urgente. No espere a la cita. Llame a emergencias ahora; un profesional clínico debe dar seguimiento de inmediato.",
         translated: "This may be urgent. Do not wait for the appointment. Call emergency services now; a qualified clinician should follow up immediately.",
       },

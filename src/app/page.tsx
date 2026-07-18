@@ -1,5 +1,5 @@
-import { BehemothStudio } from "@/components/behemoth-studio";
+import { CelyStudio } from "@/components/cely-studio";
 
 export default function Home() {
-  return <BehemothStudio />;
+  return <CelyStudio />;
 }

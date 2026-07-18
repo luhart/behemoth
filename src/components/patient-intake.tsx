@@ -313,7 +313,7 @@ function IntakeMessage({
   translated,
   languageCode,
 }: {
-  speaker: "behemoth" | "patient";
+  speaker: "cely" | "patient";
   patientName: string;
   patientInitials: string;
   text: string;
@@ -323,10 +323,10 @@ function IntakeMessage({
   return (
     <div className={`message-row ${speaker} is-visible`}>
       <div className="message-avatar" aria-hidden="true">
-        {speaker === "behemoth" ? <Bot size={15} /> : patientInitials}
+        {speaker === "cely" ? <Bot size={15} /> : patientInitials}
       </div>
       <div className="message-bubble">
-        <div className="message-speaker">{speaker === "behemoth" ? "Behemoth" : patientName}</div>
+        <div className="message-speaker">{speaker === "cely" ? "Cely" : patientName}</div>
         <p lang={languageCode} dir="auto">{text}</p>
         {translated ? (
           <div className="translation" lang="en">
@@ -726,10 +726,10 @@ export function PatientIntake({
       <div className="patient-intake-content" aria-live="polite">
         {stage === "complaint" ? (
           <div className="intake-language-stage">
-            <div className="message-row behemoth is-visible">
+            <div className="message-row cely is-visible">
               <div className="message-avatar" aria-hidden="true"><Bot size={15} /></div>
               <div className="message-bubble">
-                <div className="message-speaker">Behemoth</div>
+                <div className="message-speaker">Cely</div>
                 <p>Tell us what you want your care team to address. Write naturally in any language.</p>
                 <div className="translation"><Languages size={12} aria-hidden="true" /> Español · Tagalog · Français · العربية · हिन्दी · 中文 · 日本語 · and more</div>
               </div>
@@ -836,7 +836,7 @@ export function PatientIntake({
                   <span lang={script.code}>{script.controls.lowConfidence}</span>
                 </div>
                 <IntakeMessage
-                  speaker="behemoth"
+                  speaker="cely"
                   patientName={patientName}
                   patientInitials={patientInitials}
                   text={clarification?.question ?? script.clarificationQuestion}

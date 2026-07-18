@@ -1,6 +1,6 @@
-# Behemoth
+# Cely
 
-**The clinical workflow compiler.** Behemoth turns a messy patient need into a safe, Athena-grounded action, then turns each clinician-approved resolution into a versioned, testable skill reusable by any agent or care team.
+**The clinical workflow compiler.** Cely turns a messy patient need into a safe, Athena-grounded action, then turns each clinician-approved resolution into a versioned, testable skill reusable by any agent or care team.
 
 The hackathon wedge is intentionally narrow: a multilingual pre-visit intake for a new or long-absent outpatient. The reusable skill compiler is the technical reveal—not a generic dashboard or medical chatbot.
 
@@ -14,10 +14,10 @@ Voice intake and text-message delivery, scanned-chart or PDF migration, ICD mapp
 
 ## Three-minute demo
 
-1. Start with Maya Santos's first message in any language. For the golden path, choose the editable Tagalog shoulder demo: Maya says her shoulder is `kumikirot`, reports morning dizziness, and says she stopped her blood-pressure medicine. Behemoth detects Tagalog from that message; there is no language picker before the patient speaks.
-2. Behemoth preserves her exact words, asks one bounded question, extracts separate bilingual visit topics, and asks Maya which concern matters most before forwarding the confirmed intake into the Athena-grounded handoff workflow.
+1. Start with Maya Santos's first message in any language. For the golden path, choose the editable Tagalog shoulder demo: Maya says her shoulder is `kumikirot`, reports morning dizziness, and says she stopped her blood-pressure medicine. Cely detects Tagalog from that message; there is no language picker before the patient speaks.
+2. Cely preserves her exact words, asks one bounded question, extracts separate bilingual visit topics, and asks Maya which concern matters most before forwarding the confirmed intake into the Athena-grounded handoff workflow.
 3. The confirmed intake runs `previsit-intake-v1` against Maya's real synthetic Athena Preview record and appointment. The clinician sees Maya's preference separately from the clinical agenda, where Athena's hypertension and active-lisinopril context can elevate the medication discrepancy with cited evidence.
-4. Approve the handoff. Behemoth records a dry-run receipt for Preview appointment `2589077`; no Athena mutation occurs in the hackathon configuration.
+4. Approve the handoff. Cely records a dry-run receipt for Preview appointment `2589077`; no Athena mutation occurs in the hackathon configuration.
 5. Compile the approved trace. The app emits `SKILL.md`, agent UI metadata, a permission policy, and a replayable golden trace.
 6. Switch to the red-flag replay—or type Spanish chest pressure with shortness of breath into the universal first-message intake. The deterministic policy immediately displays bilingual emergency guidance, bypasses the model, and clinician acknowledgement performs no Athena write.
 
@@ -105,7 +105,7 @@ tests/                      policy and compiler contract tests
 
 ## What is new
 
-All Behemoth application, workflow, policy, compiler, fixture, and skill code in this repository was created for the hackathon. The Athena authentication and endpoint contract were researched from the team's existing Sematic client and local Athena OpenAPI notes; that existing application code is not copied into this repository.
+All Cely application, workflow, policy, compiler, fixture, and skill code in this repository was created for the hackathon. The Athena authentication and endpoint contract were researched from the team's existing Sematic client and local Athena OpenAPI notes; that existing application code is not copied into this repository.
 
 ## Portable skills
 

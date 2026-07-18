@@ -18,7 +18,7 @@ export function getAthenaConfig(): AthenaConfig {
   const mode = process.env.ATHENA_MODE === "live" ? "live" : "mock";
 
   if (mode === "live" && baseUrl !== ATHENA_PREVIEW_BASE_URL) {
-    throw new Error("Behemoth refuses Athena live mode outside the Preview base URL.");
+    throw new Error("Cely refuses Athena live mode outside the Preview base URL.");
   }
 
   return {

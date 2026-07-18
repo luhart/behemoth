@@ -60,7 +60,7 @@ function createNote(result: RunResult): string {
     return (left.mentionOrder ?? 99) - (right.mentionOrder ?? 99);
   });
   return [
-    "BEHEMOTH PRE-VISIT INTAKE — CLINICIAN APPROVED",
+    "CELY PRE-VISIT INTAKE — CLINICIAN APPROVED",
     "",
     result.handoff.summary,
     "",
@@ -91,7 +91,7 @@ function SourcePill({ source }: { source: "patient" | "athena" | "derived" }) {
   );
 }
 
-export function BehemothStudio() {
+export function CelyStudio() {
   const [scenarioId, setScenarioId] = useState<DemoScenario["id"]>("maya-previsit");
   const [phase, setPhase] = useState<Phase>("idle");
   const [activeStep, setActiveStep] = useState(-1);
@@ -275,7 +275,7 @@ export function BehemothStudio() {
         <div className="brand">
           <div className="brand-mark" aria-hidden="true"><HeartPulse size={18} /></div>
           <div>
-            <div className="brand-name">behemoth</div>
+            <div className="brand-name">Cely</div>
             <div className="brand-subtitle">clinical workflow compiler</div>
           </div>
         </div>
@@ -293,7 +293,7 @@ export function BehemothStudio() {
           <div className="eyebrow"><Sparkles size={14} /> Golden path 01 · Pre-visit intake</div>
           <h1>One better visit becomes a skill every care team can reuse.</h1>
           <p>
-            Behemoth listens in the patient&apos;s language, grounds every claim in Athena, routes risk to a human,
+            Cely listens in the patient&apos;s language, grounds every claim in Athena, routes risk to a human,
             and compiles approved work into a governed agent skill.
           </p>
         </div>
@@ -395,7 +395,7 @@ export function BehemothStudio() {
                 {scenario.conversation.map((message, index) => (
                   <div className="message-row is-visible" key={`${message.speaker}-${index}`}>
                     <div className="message-bubble">
-                      <div className="message-speaker">{message.speaker === "behemoth" ? "Behemoth safety policy" : scenario.patient.displayName}</div>
+                      <div className="message-speaker">{message.speaker === "cely" ? "Cely safety policy" : scenario.patient.displayName}</div>
                       <p>{message.text}</p>
                       {message.translated && <div className="translation"><Languages size={12} /> {message.translated}</div>}
                     </div>
@@ -408,7 +408,7 @@ export function BehemothStudio() {
           <div className="channel-footer">
             <span><BadgeCheck size={14} /> Original language preserved</span>
             <span><ShieldCheck size={14} /> Bounded red-flag screen</span>
-            <span title="Reset clears Behemoth's local in-memory intake; when live integrations are enabled, submitted data is processed by Claude and Athena Preview."><LockKeyhole size={14} /> Session-only app state · live services process submissions</span>
+            <span title="Reset clears Cely's local in-memory intake; when live integrations are enabled, submitted data is processed by Claude and Athena Preview."><LockKeyhole size={14} /> Session-only app state · live services process submissions</span>
           </div>
         </article>
 

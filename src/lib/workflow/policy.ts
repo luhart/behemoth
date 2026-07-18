@@ -238,7 +238,7 @@ export function evaluateIntakeSafety(text: string): IntakeSafetyDecision {
 
 export function evaluateWriteIntent(intent: WriteIntent): WriteDecision {
   if (intent.targetEnvironment !== "preview") {
-    return { allowed: false, reason: "Behemoth only writes to Athena Preview." };
+    return { allowed: false, reason: "Cely only writes to Athena Preview." };
   }
   if (!intent.approved) {
     return { allowed: false, reason: "Explicit human approval is required." };

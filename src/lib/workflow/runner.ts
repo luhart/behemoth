@@ -176,11 +176,11 @@ function interactiveConversation(patient: DemoScenario["patient"], intake: Confi
       ? "¿Entendimos correctamente?"
       : "The patient was asked to confirm the same-language restatement.";
   return [
-    { speaker: "behemoth", text: opening, translated: "What topics do you want to make sure are addressed at your visit?" },
+    { speaker: "cely", text: opening, translated: "What topics do you want to make sure are addressed at your visit?" },
     { speaker: "patient", text: intake.chiefComplaint, translated: intake.englishInterpretation },
-    { speaker: "behemoth", text: intake.clarificationQuestion, translated: "One bounded clarification was requested before interpretation." },
+    { speaker: "cely", text: intake.clarificationQuestion, translated: "One bounded clarification was requested before interpretation." },
     { speaker: "patient", text: intake.clarificationResponse },
-    { speaker: "behemoth", text: confirmation, translated: intake.englishInterpretation },
+    { speaker: "cely", text: confirmation, translated: intake.englishInterpretation },
     {
       speaker: "patient",
       text: intake.preferredLanguage === "Tagalog"
@@ -311,7 +311,7 @@ function urgentConversation(
     { speaker: "patient", text: intake.chiefComplaint },
     ...(intake.clarificationResponse ? [{ speaker: "patient" as const, text: intake.clarificationResponse }] : []),
     {
-      speaker: "behemoth",
+      speaker: "cely",
       text: guidance ?? "This may be an emergency. Call local emergency services now and do not wait for the appointment.",
       translated: `Routine intake stopped for ${patient.displayName} when the deterministic safety rule matched.`,
     },
@@ -589,7 +589,7 @@ export async function runPrevisitWorkflow(input: RunInput): Promise<RunResult> {
   }
   const escalated = safety.branch === "escalated";
   const guidanceDisplayed = input.urgentIntake?.guidanceDisplayed === true
-    || (!input.intake && scenario.conversation.some((message) => message.speaker === "behemoth" && /emergenc|urgent/i.test(`${message.text} ${message.translated ?? ""}`)));
+    || (!input.intake && scenario.conversation.some((message) => message.speaker === "cely" && /emergenc|urgent/i.test(`${message.text} ${message.translated ?? ""}`)));
   const concerns = input.urgentIntake
     ? [urgentConcern(input.urgentIntake)]
     : input.intake
@@ -656,7 +656,7 @@ export async function runPrevisitWorkflow(input: RunInput): Promise<RunResult> {
 
 export function formatAppointmentNote(result: RunResult): string {
   const lines = [
-    "BEHEMOTH PRE-VISIT INTAKE — CLINICIAN APPROVED",
+    "CELY PRE-VISIT INTAKE — CLINICIAN APPROVED",
     "",
     result.handoff.summary,
     "",
