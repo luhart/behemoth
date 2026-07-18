@@ -15,6 +15,8 @@ import {
   Play,
   RotateCcw,
   ShieldCheck,
+  Stethoscope,
+  Timer,
   UserRoundCheck,
 } from "lucide-react";
 import Image from "next/image";
@@ -24,6 +26,7 @@ import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/compon
 import { createAthenaAppointmentNote } from "@/lib/athena/note";
 import { getScenario, type DemoScenario } from "@/lib/demo/fixtures";
 import type { RunResult } from "@/lib/workflow/contracts";
+import { buildClinicianGlance } from "@/lib/workflow/glance";
 import { deriveTraceMetrics } from "@/lib/workflow/metrics";
 
 type Phase = "idle" | "running" | "review" | "approved";
@@ -72,6 +75,7 @@ export function CelyStudio() {
   const [intakeLanguage, setIntakeLanguage] = useState<string | null>(null);
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
   const traceMetrics = useMemo(() => run ? deriveTraceMetrics(run) : null, [run]);
+  const glance = useMemo(() => run ? buildClinicianGlance(run) : null, [run]);
   const orderedPatientConcerns = useMemo(() => {
     if (!run) return [];
     return [...run.concerns].sort((left, right) => {
@@ -398,6 +402,59 @@ export function CelyStudio() {
                 <div><span>Priority handoff</span><h3>{currentHandoff.headline}</h3></div>
                 <div className="confidence"><span>confidence</span><strong>{currentHandoff.confidence}</strong></div>
               </div>
+
+              {glance ? (
+                <div className="glance-card" aria-label="Rapid reconciliation glance">
+                  <div className="glance-heading">
+                    <div><Timer size={14} /><strong>Reconciliation glance</strong></div>
+                    <span>~{Math.ceil(glance.estimatedReadSeconds / 60)} min read</span>
+                  </div>
+                  {glance.topConcern ? (
+                    <div className="glance-top-concern">
+                      <em>Matters most to the patient</em>
+                      <strong>{glance.topConcern.english}</strong>
+                      <small>{glance.topConcern.native}</small>
+                    </div>
+                  ) : null}
+                  <div className="glance-grid">
+                    <div>
+                      <h5>Today&apos;s concerns</h5>
+                      <ul>
+                        {glance.complaints.map((complaint) => (
+                          <li key={complaint.native}>
+                            {complaint.english}
+                            {complaint.isTop ? <em> · top</em> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h5>Chart history</h5>
+                      {glance.history.problems.length + glance.history.medications.length + glance.history.allergies.length === 0 ? (
+                        <p>No chart facts retrieved.</p>
+                      ) : (
+                        <ul>
+                          {glance.history.problems.map((item) => <li key={`p-${item}`}><em>Dx</em> {item}</li>)}
+                          {glance.history.medications.map((item) => <li key={`m-${item}`}><em>Rx</em> {item}</li>)}
+                          {glance.history.allergies.map((item) => <li key={`a-${item}`}><em>Allergy</em> {item}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                    <div>
+                      <h5>Reconcile &amp; ask</h5>
+                      {glance.reconcile.length + glance.askFirst.length === 0 ? (
+                        <p>Nothing flagged for reconciliation.</p>
+                      ) : (
+                        <ul>
+                          {glance.reconcile.map((item) => <li key={item}>{item}</li>)}
+                          {glance.askFirst.map((item) => <li key={item}>{item}</li>)}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               <p className="handoff-summary">{currentHandoff.summary}</p>
 
               <dl className="execution-metadata" aria-label="Workflow execution details">
@@ -472,6 +529,39 @@ export function CelyStudio() {
                   ))}
                 </ol>
               </div>
+
+              {run.dxSuggestions && run.dxSuggestions.suggestions.length > 0 ? (
+                <div className="dx-card" aria-label="Coding and differential suggestions">
+                  <div className="dx-heading">
+                    <div><Stethoscope size={14} /><strong>Suggested considerations · ICD-10</strong></div>
+                    <span>{run.dxSuggestions.method === "sonnet" ? "Sonnet 5" : "Deterministic"} · not a diagnosis</span>
+                  </div>
+                  <ul>
+                    {run.dxSuggestions.suggestions.map((suggestion) => (
+                      <li key={`${suggestion.icd10}-${suggestion.label}`}>
+                        <span className="icd-chip">{suggestion.icd10}</span>
+                        <div>
+                          <strong>
+                            {suggestion.label}
+                            <em className={`dx-basis dx-${suggestion.basis}`}>
+                              {suggestion.basis === "reported-symptom" ? "Reported symptom" : suggestion.basis === "chart-history" ? "On chart" : "Consider"}
+                            </em>
+                          </strong>
+                          <small>{suggestion.codeLabel}</small>
+                          <p>{suggestion.rationale}</p>
+                          {suggestion.relatedSymptoms.length > 0 ? (
+                            <div className="dx-related">
+                              <em>Ask about:</em>
+                              {suggestion.relatedSymptoms.map((symptom) => <span key={symptom}>{symptom}</span>)}
+                            </div>
+                          ) : null}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="dx-disclaimer">{run.dxSuggestions.disclaimer}</p>
+                </div>
+              ) : null}
 
               {currentHandoff.discrepancies.length > 0 && (
                 <div className="discrepancy-callout">
