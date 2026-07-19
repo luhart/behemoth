@@ -21,6 +21,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/components/patient-intake";
+import { createAthenaAppointmentNote } from "@/lib/athena/note";
 import { getScenario, type DemoScenario } from "@/lib/demo/fixtures";
 import type { RunResult } from "@/lib/workflow/contracts";
 import { deriveTraceMetrics } from "@/lib/workflow/metrics";
@@ -47,34 +48,6 @@ const workflowSteps = [
 
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const preferredScrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-
-function createNote(result: RunResult): string {
-  const patientPriorities = [...result.concerns].sort((left, right) => {
-    if (left.patientPriority === "top" && right.patientPriority !== "top") return -1;
-    if (right.patientPriority === "top" && left.patientPriority !== "top") return 1;
-    return (left.mentionOrder ?? 99) - (right.mentionOrder ?? 99);
-  });
-  return [
-    "CELY PRE-VISIT INTAKE — CLINICIAN APPROVED",
-    "",
-    result.handoff.summary,
-    "",
-    "PATIENT-CONFIRMED PRIORITIES",
-    ...patientPriorities.map(
-      (concern, index) => `${index + 1}. ${concern.translated ?? concern.patientWords}${concern.patientPriority === "top" ? " [patient's top priority]" : ""}\n   Original: ${concern.patientWords}`,
-    ),
-    "",
-    "VISIT AGENDA",
-    ...result.handoff.agenda.map(
-      (item) => `- ${item.label}\n  Rationale: ${item.rationale}\n  Evidence: ${item.evidenceIds.join(", ")}`,
-    ),
-    ...(result.handoff.discrepancies.length
-      ? ["", "DISCREPANCIES TO RECONCILE", ...result.handoff.discrepancies.map((item) => `- ${item}`)]
-      : []),
-    "",
-    `Audit: ${result.runId}`,
-  ].join("\n");
-}
 
 function SourceLabel({ source }: { source: "patient" | "athena" | "derived" }) {
   const Icon = source === "athena" ? Cloud : source === "patient" ? Languages : GitBranch;
@@ -206,7 +179,7 @@ export function CelyStudio() {
           approved: true,
           actorRole: "clinician",
           appointmentId: run.patient.appointmentId,
-          noteText: createNote(run),
+          noteText: createAthenaAppointmentNote(run),
         }),
       });
       const payload = (await response.json()) as { receipt?: string; detail?: string; error?: string };
