@@ -3,25 +3,22 @@
 import {
   Activity,
   ArrowRight,
-  BadgeCheck,
   BookOpenCheck,
   Check,
-  ChevronRight,
   CircleAlert,
   ClipboardCheck,
   Cloud,
   Code2,
   FileCheck2,
   GitBranch,
-  HeartPulse,
   Languages,
   LockKeyhole,
   Play,
   RotateCcw,
   ShieldCheck,
-  Sparkles,
   UserRoundCheck,
 } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
 import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/components/patient-intake";
@@ -81,12 +78,13 @@ function createNote(result: RunResult): string {
   ].join("\n");
 }
 
-function SourcePill({ source }: { source: "patient" | "athena" | "derived" }) {
+function SourceLabel({ source }: { source: "patient" | "athena" | "derived" }) {
   const Icon = source === "athena" ? Cloud : source === "patient" ? Languages : GitBranch;
+  const label = source === "athena" ? "Athena Preview" : source === "patient" ? "Patient report" : "Interpretation";
   return (
-    <span className={`source-pill source-${source}`}>
+    <span className={`source-label source-${source}`}>
       <Icon size={12} aria-hidden="true" />
-      {source === "athena" ? "Athena Preview" : source}
+      {label}
     </span>
   );
 }
@@ -273,28 +271,37 @@ export function CelyStudio() {
     <main className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <div className="brand-mark" aria-hidden="true"><HeartPulse size={18} /></div>
+          <Image
+            className="brand-wordmark"
+            src="/brand/cely-wordmark.svg"
+            alt="Cely"
+            width={92}
+            height={46}
+            priority
+          />
           <div>
-            <div className="brand-name">Cely</div>
-            <div className="brand-subtitle">clinical workflow compiler</div>
+            <div className="brand-subtitle">Clinical workflow intelligence</div>
           </div>
         </div>
         <div className="topbar-actions">
-          <span className="build-chip"><Activity size={13} /> Hackathon build · Day 0</span>
-          <span className={`connection-chip ${status?.connected ? "is-live" : "is-fixture"}`} title={status?.detail}>
+          <span
+            className={`connection-status ${status === null ? "is-checking" : status.connected ? "is-live" : "is-fixture"}`}
+            title={status?.detail}
+            aria-live="polite"
+          >
             <span className="status-dot" />
-            {status?.connected ? "Athena Preview live" : "Preview fixture"}
+            {status === null ? "Checking Athena Preview" : status.connected ? "Athena Preview connected" : "Athena Preview fixture"}
           </span>
         </div>
       </header>
 
       <section className="hero">
         <div>
-          <div className="eyebrow"><Sparkles size={14} /> Golden path 01 · Pre-visit intake</div>
-          <h1>One better visit becomes a skill every care team can reuse.</h1>
+          <div className="eyebrow">Pre-visit intake</div>
+          <h1>Every concern, clearly carried.</h1>
           <p>
-            Cely listens in the patient&apos;s language, grounds every claim in Athena, routes risk to a human,
-            and compiles approved work into a governed agent skill.
+            Cely turns patient concerns and chart context into an evidence-linked visit agenda, with patients
+            and clinicians in control.
           </p>
         </div>
         <div className="hero-actions">
@@ -315,7 +322,7 @@ export function CelyStudio() {
         </div>
       </section>
 
-      <section className="workflow-card" aria-label="Workflow execution">
+      <section className="workflow-rail" aria-label="Workflow execution">
         <div className="workflow-heading">
           <div>
             <span className="mono-label">previsit-intake-v1</span>
@@ -323,30 +330,33 @@ export function CelyStudio() {
           </div>
           <div className="workflow-policy"><LockKeyhole size={13} /> No autonomous writes</div>
         </div>
-        <div className="workflow-steps">
+        <ol className="workflow-steps">
           {workflowSteps.map((step, index) => {
             const Icon = step.icon;
             const complete = activeStep > index || (phase === "compiled" && index === 5);
             const active = activeStep === index;
             return (
-              <div className={`workflow-step ${complete ? "is-complete" : ""} ${active ? "is-active" : ""}`} key={step.label}>
-                <div className="step-node">{complete ? <Check size={15} /> : <Icon size={15} />}</div>
+              <li
+                className={`workflow-step ${complete ? "is-complete" : ""} ${active ? "is-active" : ""}`}
+                key={step.label}
+                aria-current={active ? "step" : undefined}
+              >
+                <div className="step-node">{complete ? <Check size={15} aria-hidden="true" /> : <Icon size={15} aria-hidden="true" />}</div>
                 <div><strong>{step.label}</strong><span>{step.detail}</span></div>
-                {index < workflowSteps.length - 1 && <ChevronRight className="step-arrow" size={15} />}
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ol>
       </section>
 
       {error && <div className="error-banner"><CircleAlert size={16} /> {error}</div>}
 
       <section className="runtime-grid">
-        <article className="panel conversation-panel">
-          <div className="panel-header">
+        <article className="workspace-column conversation-panel">
+          <div className="workspace-header">
             <div>
-              <div className="panel-kicker">Patient channel</div>
-              <h2>Adaptive intake</h2>
+              <div className="panel-kicker">Patient intake</div>
+              <h2>Describe what matters</h2>
             </div>
             <div className="scenario-switch" aria-label="Demo scenario">
               <button
@@ -405,37 +415,36 @@ export function CelyStudio() {
             )}
           </div>
 
-          <div className="channel-footer">
-            <span><BadgeCheck size={14} /> Original language preserved</span>
-            <span><ShieldCheck size={14} /> Bounded red-flag screen</span>
-            <span title="Reset clears Cely's local in-memory intake; when live integrations are enabled, submitted data is processed by Claude and Athena Preview."><LockKeyhole size={14} /> Session-only app state · live services process submissions</span>
-          </div>
+          <ul className="channel-notes">
+            <li><Check size={14} aria-hidden="true" /> Original language preserved</li>
+            <li><ShieldCheck size={14} aria-hidden="true" /> Bounded red-flag screen</li>
+            <li title="Reset clears Cely's local in-memory intake; when live integrations are enabled, submitted data is processed by Claude and Athena Preview."><LockKeyhole size={14} aria-hidden="true" /> Session-only app state · live services process submissions</li>
+          </ul>
         </article>
 
         <article
           id="clinician-handoff"
-          className={`panel handoff-panel ${isEscalation ? "is-escalation" : ""}`}
+          className={`workspace-column handoff-panel ${isEscalation ? "is-escalation" : ""}`}
           tabIndex={-1}
         >
-          <div className="panel-header">
+          <div className="workspace-header">
             <div>
-              <div className="panel-kicker">Clinician channel</div>
-              <h2>One-minute handoff</h2>
+              <div className="panel-kicker">Clinician review</div>
+              <h2>Visit agenda</h2>
             </div>
             {run ? (
-              <span className={`disposition-badge ${isEscalation ? "urgent" : "ready"}`}>
+              <span className={`disposition-status ${isEscalation ? "urgent" : "ready"}`}>
                 {isEscalation ? <CircleAlert size={13} /> : <BookOpenCheck size={13} />}
                 {isEscalation ? "Escalated" : "Ready to review"}
               </span>
-            ) : <span className="disposition-badge waiting">Waiting for run</span>}
+            ) : <span className="disposition-status waiting">Waiting for run</span>}
           </div>
 
           {!currentHandoff ? (
             <div className="empty-handoff">
-              <div className="empty-orbit"><FileCheck2 size={24} /></div>
-              <strong>No black-box summary.</strong>
-              <p>Run the workflow to produce a structured handoff with evidence, uncertainty, and an approval gate.</p>
-              <div className="empty-contracts"><span>Evidence IDs</span><span>Safety branch</span><span>Human approval</span></div>
+              <FileCheck2 className="empty-icon" size={24} aria-hidden="true" />
+              <strong>No clinician handoff yet.</strong>
+              <p>Run the workflow to create an evidence-linked visit agenda for clinician review.</p>
             </div>
           ) : (
             <div className="handoff-content">
@@ -445,28 +454,33 @@ export function CelyStudio() {
               </div>
               <p className="handoff-summary">{currentHandoff.summary}</p>
 
-              <div className="execution-strip">
-                <span className={run.execution.athena === "live" || run.execution.athena === "partial" ? "live" : "fallback"}>
-                  <Cloud size={12} /> Athena · {run.execution.athena === "partial" ? "live / partial" : run.execution.athena}
-                </span>
-                <span className={run.execution.model === "live" ? "live" : "fallback"}>
-                  <Sparkles size={12} /> {isEscalation ? "Model · bypassed" : `Sonnet 5 · ${run.execution.model}`}
-                </span>
-                <span className="live"><ShieldCheck size={12} /> Safety · deterministic</span>
-              </div>
+              <dl className="execution-metadata" aria-label="Workflow execution details">
+                <div className={run.execution.athena === "live" || run.execution.athena === "partial" ? "is-live" : "is-fallback"}>
+                  <dt>Athena</dt>
+                  <dd>{run.execution.athena === "partial" ? "Live, partial" : run.execution.athena}</dd>
+                </div>
+                <div className={run.execution.model === "live" ? "is-live" : "is-fallback"}>
+                  <dt>Model</dt>
+                  <dd>{isEscalation ? "Bypassed" : `Sonnet 5, ${run.execution.model}`}</dd>
+                </div>
+                <div className="is-live">
+                  <dt>Safety</dt>
+                  <dd>Deterministic</dd>
+                </div>
+              </dl>
 
               {traceMetrics ? (
-                <div className="trace-metrics" aria-label="Measured workflow trace">
-                  <span><strong>{traceMetrics.concernCount}</strong> patient topic{traceMetrics.concernCount === 1 ? "" : "s"}</span>
-                  {traceMetrics.handoffDurationMs !== null ? <span><strong>{(traceMetrics.handoffDurationMs / 1000).toFixed(1)}s</strong> to handoff</span> : null}
-                  <span><strong>{traceMetrics.athenaEvidenceCount}</strong> Athena fact{traceMetrics.athenaEvidenceCount === 1 ? "" : "s"}</span>
-                  <span><strong>{traceMetrics.agendaEvidenceCoverage.percent}%</strong> citations resolved</span>
-                  <span><strong>{traceMetrics.autonomousWrites}</strong> autonomous writes</span>
-                </div>
+                <dl className="trace-metrics" aria-label="Measured workflow trace">
+                  <div><dt>Patient topic{traceMetrics.concernCount === 1 ? "" : "s"}</dt><dd>{traceMetrics.concernCount}</dd></div>
+                  {traceMetrics.handoffDurationMs !== null ? <div><dt>To handoff</dt><dd>{(traceMetrics.handoffDurationMs / 1000).toFixed(1)}s</dd></div> : null}
+                  <div><dt>Athena fact{traceMetrics.athenaEvidenceCount === 1 ? "" : "s"}</dt><dd>{traceMetrics.athenaEvidenceCount}</dd></div>
+                  <div><dt>Citations resolved</dt><dd>{traceMetrics.agendaEvidenceCoverage.percent}%</dd></div>
+                  <div><dt>Autonomous writes</dt><dd>{traceMetrics.autonomousWrites}</dd></div>
+                </dl>
               ) : null}
 
               {orderedPatientConcerns.length > 0 ? (
-                <div className="patient-priorities-card">
+                <section className="patient-priorities">
                   <div className="patient-priorities-heading">
                     <div><Languages size={14} /><strong>Patient-confirmed priorities</strong></div>
                     <span>Preference, not clinical urgency</span>
@@ -479,12 +493,12 @@ export function CelyStudio() {
                           <strong>{concern.translated ?? concern.patientWords}</strong>
                           <small>{concern.patientWords}</small>
                         </div>
-                        {concern.patientPriority === "top" ? <em>Top priority</em> : null}
+                        {concern.patientPriority === "top" ? <span className="priority-status">Patient&apos;s top priority</span> : null}
                       </li>
                     ))}
                   </ol>
                   {!orderedPatientConcerns.some((concern) => concern.patientPriority === "top") ? <p>No single top priority selected; mention order is preserved.</p> : null}
-                </div>
+                </section>
               ) : null}
 
               <div className="handoff-section">
@@ -500,8 +514,8 @@ export function CelyStudio() {
                           {item.evidenceIds.map((evidenceId) => {
                             const evidence = run.evidence.find((candidate) => candidate.id === evidenceId);
                             return (
-                              <div className="agenda-evidence" key={evidenceId} title={evidenceId}>
-                                {evidence ? <SourcePill source={evidence.source} /> : null}
+                              <div className="agenda-citation" key={evidenceId} title={evidenceId}>
+                                {evidence ? <SourceLabel source={evidence.source} /> : null}
                                 <small>{evidence?.value ?? evidenceId}</small>
                               </div>
                             );
@@ -514,7 +528,7 @@ export function CelyStudio() {
               </div>
 
               {currentHandoff.discrepancies.length > 0 && (
-                <div className="discrepancy-card">
+                <div className="discrepancy-callout">
                   <div><CircleAlert size={15} /><strong>Needs reconciliation</strong></div>
                   <p>{currentHandoff.discrepancies[0]}</p>
                 </div>
@@ -524,7 +538,7 @@ export function CelyStudio() {
                 <div className="section-label">Evidence ledger</div>
                 {run.evidence.slice(0, 6).map((item) => (
                   <div className="evidence-row" key={item.id}>
-                    <SourcePill source={item.source} />
+                    <SourceLabel source={item.source} />
                     <div><strong>{item.value}</strong><span>{item.resource ?? item.label}{item.observedAt ? ` · ${item.observedAt}` : ""}</span></div>
                   </div>
                 ))}
@@ -552,24 +566,23 @@ export function CelyStudio() {
       </section>
 
       {compiled && (
-        <section className="compiled-panel">
+        <section className="compiled-section">
           <div className="compiled-copy">
-            <div className="compiled-icon"><Sparkles size={20} /></div>
             <div>
-              <div className="panel-kicker">The compounding loop</div>
-              <h2>Approved work became <code>/{compiled.name}</code></h2>
-              <p>Instructions, permissions, and a golden trace are now packaged for Codex, Claude Code, or any compatible agent runtime.</p>
-              <div className="file-chips">{compiled.files.map((file) => <span key={file.path}><FileCheck2 size={13} /> {file.path}</span>)}</div>
+              <div className="panel-kicker">Governed skill</div>
+              <h2><code>/{compiled.name}</code> is ready to test</h2>
+              <p>The approved workflow is packaged with its instructions, permissions, and test trace.</p>
+              <ul className="compiled-files">{compiled.files.map((file) => <li key={file.path}><FileCheck2 size={13} aria-hidden="true" /> {file.path}</li>)}</ul>
             </div>
           </div>
           <div className="code-preview">
-            <div className="code-header"><span className="code-dots"><i /><i /><i /></span><span>skills/{compiled.name}/SKILL.md</span><span>v{compiled.version}</span></div>
+            <div className="code-header"><span>skills/{compiled.name}/SKILL.md</span><span>v{compiled.version}</span></div>
             <pre>{compiled.files.find((file) => file.path === "SKILL.md")?.content.split("\n").slice(0, 18).join("\n")}</pre>
           </div>
         </section>
       )}
 
-      <footer className="audit-footer">
+      <footer className="audit-trail">
         <div><Activity size={14} /><span>Audit trail</span><strong>{run?.runId ?? "No run yet"}</strong></div>
         <div className="audit-events">
           <span className={activeStep >= 0 ? "done" : ""}>Intake captured</span><ArrowRight size={12} />
