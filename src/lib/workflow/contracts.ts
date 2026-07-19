@@ -167,6 +167,26 @@ export const HandoffSchema = z
     });
   });
 
+export const DxSuggestionSchema = z.object({
+  label: z.string().trim().min(1).max(120),
+  icd10: z.string().regex(/^[A-TV-Z][0-9][0-9A-Z](?:\.[0-9A-Z]{1,4})?$/, "Must be an ICD-10-CM code."),
+  codeLabel: z.string().trim().min(1).max(160),
+  basis: z.enum(["reported-symptom", "chart-history", "differential-consideration"]),
+  relatedSymptoms: z.array(z.string().trim().min(1).max(120)).max(4),
+  rationale: z.string().trim().min(1).max(300),
+  evidenceIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(3)
+    .refine((ids) => new Set(ids).size === ids.length, "Suggestion evidence IDs must be unique."),
+});
+
+export const DxSuggestionsSchema = z.object({
+  suggestions: z.array(DxSuggestionSchema).max(5),
+  method: z.enum(["deterministic", "sonnet"]),
+  disclaimer: z.string().trim().min(1),
+});
+
 export const ScenarioIdSchema = z.enum(["maya-previsit", "luis-escalation"]);
 
 export const RunInputSchema = z
@@ -212,6 +232,7 @@ export const RunResultSchema = z.object({
   concerns: z.array(ConcernSchema),
   evidence: z.array(EvidenceSchema),
   handoff: HandoffSchema,
+  dxSuggestions: DxSuggestionsSchema.optional(),
   execution: z.object({
     athena: z.enum(["live", "partial", "fixture", "degraded"]),
     model: z.enum(["live", "fixture", "degraded"]),
@@ -233,6 +254,8 @@ export type IntakeInterpretation = z.infer<typeof IntakeInterpretationSchema>;
 export type SafetyRuleId = z.infer<typeof SafetyRuleIdSchema>;
 export type UrgentIntake = z.infer<typeof UrgentIntakeSchema>;
 export type AgendaItem = z.infer<typeof AgendaItemSchema>;
+export type DxSuggestion = z.infer<typeof DxSuggestionSchema>;
+export type DxSuggestions = z.infer<typeof DxSuggestionsSchema>;
 export type ClinicalHandoff = z.infer<typeof HandoffSchema>;
 export type RunInput = z.infer<typeof RunInputSchema>;
 export type RunResult = z.infer<typeof RunResultSchema>;

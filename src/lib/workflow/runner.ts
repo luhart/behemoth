@@ -1,5 +1,6 @@
 import "server-only";
 
+import { generateDxSuggestions } from "@/lib/ai/differential";
 import { generateClinicalHandoff } from "@/lib/ai/handoff";
 import { AthenaPreviewClient } from "@/lib/athena/client";
 import { getAthenaConfig, hasAthenaCredentials } from "@/lib/athena/config";
@@ -626,6 +627,10 @@ export async function runPrevisitWorkflow(input: RunInput): Promise<RunResult> {
         deterministicDisposition,
         preferLive: input.preferLiveModel,
       });
+  // Decision-support only: skipped entirely on the emergency branch and never included in the Athena note.
+  const dxSuggestions = escalated
+    ? undefined
+    : await generateDxSuggestions({ concerns, evidence, preferLive: input.preferLiveModel });
 
   return {
     runId: `run_${crypto.randomUUID().slice(0, 8)}`,
@@ -645,6 +650,7 @@ export async function runPrevisitWorkflow(input: RunInput): Promise<RunResult> {
     concerns,
     evidence,
     handoff: generation.handoff,
+    dxSuggestions,
     execution: {
       athena: athenaMode,
       model: generation.mode,

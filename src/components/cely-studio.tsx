@@ -15,6 +15,8 @@ import {
   Play,
   RotateCcw,
   ShieldCheck,
+  Stethoscope,
+  Timer,
   UserRoundCheck,
 } from "lucide-react";
 import Image from "next/image";
@@ -24,6 +26,7 @@ import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/compon
 import { createAthenaAppointmentNote } from "@/lib/athena/note";
 import { getScenario, type DemoScenario } from "@/lib/demo/fixtures";
 import type { RunResult } from "@/lib/workflow/contracts";
+import { buildClinicianGlance } from "@/lib/workflow/glance";
 import { deriveTraceMetrics } from "@/lib/workflow/metrics";
 
 type Phase = "idle" | "running" | "review" | "approved";
@@ -72,6 +75,7 @@ export function CelyStudio() {
   const [intakeLanguage, setIntakeLanguage] = useState<string | null>(null);
   const scenario = useMemo(() => getScenario(scenarioId), [scenarioId]);
   const traceMetrics = useMemo(() => run ? deriveTraceMetrics(run) : null, [run]);
+  const glance = useMemo(() => run ? buildClinicianGlance(run) : null, [run]);
   const orderedPatientConcerns = useMemo(() => {
     if (!run) return [];
     return [...run.concerns].sort((left, right) => {
@@ -398,6 +402,29 @@ export function CelyStudio() {
                 <div><span>Priority handoff</span><h3>{currentHandoff.headline}</h3></div>
                 <div className="confidence"><span>confidence</span><strong>{currentHandoff.confidence}</strong></div>
               </div>
+
+              {glance ? (
+                <div className="glance-card" aria-label="Rapid reconciliation glance">
+                  <div className="glance-heading">
+                    <div><Timer size={14} /><strong>Reconciliation glance</strong></div>
+                    <span>~{Math.ceil(glance.estimatedReadSeconds / 60)} min read</span>
+                  </div>
+                  <ul className="glance-list">
+                    {glance.topConcern ? (
+                      <li title={glance.topConcern.native}><em>Top for patient</em>{glance.topConcern.english}</li>
+                    ) : null}
+                    {glance.complaints.filter((complaint) => !complaint.isTop).map((complaint) => (
+                      <li key={complaint.native} title={complaint.native}><em>Concern</em>{complaint.english}</li>
+                    ))}
+                    {glance.history.problems.length > 0 ? <li><em>Dx</em>{glance.history.problems.join(" · ")}</li> : null}
+                    {glance.history.medications.length > 0 ? <li><em>Rx</em>{glance.history.medications.join(" · ")}</li> : null}
+                    {glance.history.allergies.length > 0 ? <li><em>Allergy</em>{glance.history.allergies.join(" · ")}</li> : null}
+                    {glance.reconcile.map((item) => <li key={item}><em>Reconcile</em>{item}</li>)}
+                    {glance.askFirst.map((item) => <li key={item}><em>Ask</em>{item}</li>)}
+                  </ul>
+                </div>
+              ) : null}
+
               <p className="handoff-summary">{currentHandoff.summary}</p>
 
               <dl className="execution-metadata" aria-label="Workflow execution details">
@@ -472,6 +499,29 @@ export function CelyStudio() {
                   ))}
                 </ol>
               </div>
+
+              {run.dxSuggestions && run.dxSuggestions.suggestions.length > 0 ? (
+                <div className="dx-card" aria-label="Coding and differential suggestions">
+                  <div className="dx-heading">
+                    <div><Stethoscope size={14} /><strong>Suggested considerations · ICD-10</strong></div>
+                    <span>{run.dxSuggestions.method === "sonnet" ? "Sonnet 5" : "Deterministic"} · not a diagnosis</span>
+                  </div>
+                  <ul className="dx-list">
+                    {run.dxSuggestions.suggestions.map((suggestion) => (
+                      <li key={`${suggestion.icd10}-${suggestion.label}`} title={`${suggestion.codeLabel} — ${suggestion.rationale}`}>
+                        <code>{suggestion.icd10}</code>
+                        {suggestion.label}
+                        <span>
+                          {" — "}
+                          {suggestion.basis === "reported-symptom" ? "reported symptom" : suggestion.basis === "chart-history" ? "on chart" : "consider"}
+                          {suggestion.relatedSymptoms.length > 0 ? ` · ask: ${suggestion.relatedSymptoms.join(", ")}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="dx-disclaimer">{run.dxSuggestions.disclaimer}</p>
+                </div>
+              ) : null}
 
               {currentHandoff.discrepancies.length > 0 && (
                 <div className="discrepancy-callout">
