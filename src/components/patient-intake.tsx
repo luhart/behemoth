@@ -682,6 +682,9 @@ export function PatientIntake({
   return (
     <section className="patient-intake" aria-label="Guided patient intake">
       <div className="intake-progress" aria-label={`Intake progress: step ${Math.min(stageIndex + 1, 4)} of 4`}>
+        <span className="intake-progress-summary">
+          Step {Math.min(stageIndex + 1, 4)} of 4 · {stageLabels[Math.min(stageIndex, stageLabels.length - 1)]}
+        </span>
         {stageLabels.map((label, index) => {
           const complete = index < stageIndex;
           const current = index === stageIndex;

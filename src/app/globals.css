@@ -606,6 +606,14 @@ p {
   color: var(--cely-color-ink-muted);
 }
 
+.intake-progress-summary {
+  display: none;
+}
+
+.patient-intake:has(.intake-urgent-card) .intake-progress {
+  display: none;
+}
+
 .intake-progress-step {
   min-width: 0;
   display: inline-flex;
@@ -765,6 +773,10 @@ p {
   gap: var(--cely-space-8);
 }
 
+.conversation-panel {
+  container-type: inline-size;
+}
+
 .message-row {
   display: flex;
   align-items: flex-start;
@@ -803,6 +815,14 @@ p {
   border-inline-start-color: var(--cely-color-gold-decorative);
 }
 
+.message-row.is-safety .message-bubble {
+  border-inline-start-color: var(--cely-color-urgent);
+}
+
+.message-row.is-safety .message-speaker {
+  color: var(--cely-color-urgent);
+}
+
 .message-speaker {
   margin-bottom: var(--cely-space-2);
   color: var(--cely-color-brand);
@@ -811,6 +831,10 @@ p {
   font-weight: var(--cely-font-weight-semibold);
   letter-spacing: 0;
   text-transform: none;
+}
+
+.message-row.patient .message-speaker {
+  color: var(--cely-color-review);
 }
 
 .message-bubble p,
@@ -2412,7 +2436,15 @@ p {
   }
 
   .intake-progress-step {
-    flex: 0 0 auto;
+    display: none;
+  }
+
+  .intake-progress-summary {
+    display: block;
+    color: var(--cely-color-ink);
+    font-size: var(--cely-font-size-supporting);
+    line-height: var(--cely-line-height-supporting);
+    font-weight: var(--cely-font-weight-medium);
   }
 
   .intake-composer-actions,
@@ -2528,8 +2560,23 @@ p {
     flex-direction: column;
   }
 
+  .empty-handoff {
+    min-height: 26rem;
+  }
+
   .audit-events {
     justify-content: flex-start;
+  }
+}
+
+@container (max-width: 40rem) {
+  .intake-confirmation-copy {
+    grid-template-columns: 1fr;
+  }
+
+  .intake-confirmation-copy > div + div {
+    border-top: var(--cely-rule-width) solid var(--cely-color-line);
+    border-inline-start: 0;
   }
 }
 

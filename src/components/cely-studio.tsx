@@ -49,6 +49,7 @@ const workflowSteps = [
 ] as const;
 
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+const preferredScrollBehavior = (): ScrollBehavior => window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
 
 function createNote(result: RunResult): string {
   const patientPriorities = [...result.concerns].sort((left, right) => {
@@ -258,13 +259,13 @@ export function CelyStudio() {
     setActiveStep(0);
     const target = document.getElementById("patient-intake");
     target?.focus({ preventScroll: true });
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.scrollIntoView({ behavior: preferredScrollBehavior(), block: "center" });
   };
 
   const focusClinicianHandoff = () => {
     const target = document.getElementById("clinician-handoff");
     target?.focus({ preventScroll: true });
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.scrollIntoView({ behavior: preferredScrollBehavior(), block: "center" });
   };
 
   return (
@@ -403,9 +404,14 @@ export function CelyStudio() {
             ) : (
               <div className="conversation-stream">
                 {scenario.conversation.map((message, index) => (
-                  <div className="message-row is-visible" key={`${message.speaker}-${index}`}>
+                  <div
+                    className={`message-row is-visible ${message.speaker === "patient" ? "patient" : ""} ${message.speaker === "cely" && index > 0 ? "is-safety" : ""}`}
+                    key={`${message.speaker}-${index}`}
+                  >
                     <div className="message-bubble">
-                      <div className="message-speaker">{message.speaker === "cely" ? "Cely safety policy" : scenario.patient.displayName}</div>
+                      <div className="message-speaker">
+                        {message.speaker === "cely" ? (index === 0 ? "Next question" : "Safety guidance") : "Patient words"}
+                      </div>
                       <p>{message.text}</p>
                       {message.translated && <div className="translation"><Languages size={12} /> {message.translated}</div>}
                     </div>
