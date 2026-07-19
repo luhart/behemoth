@@ -8,7 +8,6 @@ import {
   CircleAlert,
   ClipboardCheck,
   Cloud,
-  Code2,
   FileCheck2,
   GitBranch,
   Languages,
@@ -23,11 +22,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PatientIntake, type ConfirmedIntake, type UrgentIntake } from "@/components/patient-intake";
 import { getScenario, type DemoScenario } from "@/lib/demo/fixtures";
-import type { CompiledSkill } from "@/lib/skills/compiler";
 import type { RunResult } from "@/lib/workflow/contracts";
 import { deriveTraceMetrics } from "@/lib/workflow/metrics";
 
-type Phase = "idle" | "running" | "review" | "approved" | "compiled";
+type Phase = "idle" | "running" | "review" | "approved";
 type AthenaStatus = {
   connected: boolean;
   configured: boolean;
@@ -45,7 +43,6 @@ const workflowSteps = [
   { label: "Guard", detail: "deterministic safety", icon: ShieldCheck },
   { label: "Handoff", detail: "evidence-linked", icon: ClipboardCheck },
   { label: "Approve", detail: "human authority", icon: UserRoundCheck },
-  { label: "Compile", detail: "portable skill", icon: Code2 },
 ] as const;
 
 const delay = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
@@ -97,7 +94,6 @@ export function CelyStudio() {
   const [run, setRun] = useState<RunResult | null>(null);
   const [status, setStatus] = useState<AthenaStatus | null>(null);
   const [receipt, setReceipt] = useState<string | null>(null);
-  const [compiled, setCompiled] = useState<CompiledSkill | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [intakeKey, setIntakeKey] = useState(0);
   const [intakeLanguage, setIntakeLanguage] = useState<string | null>(null);
@@ -138,7 +134,6 @@ export function CelyStudio() {
     setActiveStep(-1);
     setRun(null);
     setReceipt(null);
-    setCompiled(null);
     setError(null);
     setIntakeLanguage(null);
     setIntakeKey((current) => current + 1);
@@ -150,7 +145,6 @@ export function CelyStudio() {
     setActiveStep(urgentIntake ? 2 : intake ? 1 : 0);
     setRun(null);
     setReceipt(null);
-    setCompiled(null);
     setError(null);
 
     try {
@@ -199,7 +193,7 @@ export function CelyStudio() {
     if (run.execution.safetyBranch === "escalated") {
       setRun({ ...run, approval: { required: true, status: "approved" } });
       setReceipt("Escalation acknowledged by clinician. No Athena write was attempted.");
-      setActiveStep(4);
+      setActiveStep(workflowSteps.length);
       setPhase("approved");
       return;
     }
@@ -219,31 +213,10 @@ export function CelyStudio() {
       if (!response.ok) throw new Error(payload.error ?? "Approval could not be recorded.");
       setRun({ ...run, approval: { required: true, status: "approved" } });
       setReceipt(payload.detail ?? payload.receipt ?? "Approval recorded");
-      setActiveStep(4);
+      setActiveStep(workflowSteps.length);
       setPhase("approved");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Approval failed.");
-    }
-  };
-
-  const compileSkill = async () => {
-    if (!run || run.approval.status !== "approved") return;
-    setError(null);
-    try {
-      setActiveStep(5);
-      const response = await fetch("/api/skills/compile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          run,
-          corrections: ["Lead with medication reconciliation when patient report conflicts with the active chart."],
-        }),
-      });
-      if (!response.ok) throw new Error("The approved trace could not be compiled.");
-      setCompiled((await response.json()) as CompiledSkill);
-      setPhase("compiled");
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Compilation failed.");
     }
   };
 
@@ -327,14 +300,13 @@ export function CelyStudio() {
         <div className="workflow-heading">
           <div>
             <span className="mono-label">previsit-intake-v1</span>
-            <span className="workflow-version">6 governed stages</span>
+            <span className="workflow-version">5 governed stages</span>
           </div>
-          <div className="workflow-policy"><LockKeyhole size={13} /> No autonomous writes</div>
         </div>
         <ol className="workflow-steps">
           {workflowSteps.map((step, index) => {
             const Icon = step.icon;
-            const complete = activeStep > index || (phase === "compiled" && index === 5);
+            const complete = activeStep > index;
             const active = activeStep === index;
             return (
               <li
@@ -421,11 +393,6 @@ export function CelyStudio() {
             )}
           </div>
 
-          <ul className="channel-notes">
-            <li><Check size={14} aria-hidden="true" /> Original language preserved</li>
-            <li><ShieldCheck size={14} aria-hidden="true" /> Bounded red-flag screen</li>
-            <li title="Reset clears Cely's local in-memory intake; when live integrations are enabled, submitted data is processed by Claude and Athena Preview."><LockKeyhole size={14} aria-hidden="true" /> Session-only app state · live services process submissions</li>
-          </ul>
         </article>
 
         <article
@@ -553,16 +520,17 @@ export function CelyStudio() {
               <div className="approval-box">
                 <div className="approval-copy">
                   <div className="approval-icon"><LockKeyhole size={15} /></div>
-                  <div><strong>{run.approval.status === "approved" ? "Approved by clinician" : "Human approval required"}</strong><span>{receipt ?? "No Athena mutation can occur before this checkpoint."}</span></div>
+                  <div>
+                    <strong>{run.approval.status === "approved" ? (isEscalation ? "Escalation acknowledged" : "Approved by clinician") : "Human approval required"}</strong>
+                    <span>{receipt ?? "No Athena mutation can occur before this checkpoint."}</span>
+                  </div>
                 </div>
                 {run.approval.status === "pending" ? (
                   <button className="button button-approve" onClick={() => void approveRun()}>
                     <UserRoundCheck size={15} /> {isEscalation ? "Acknowledge escalation" : "Approve handoff"}
                   </button>
                 ) : (
-                  <button className="button button-compile" onClick={() => void compileSkill()} disabled={phase === "compiled"}>
-                    <Code2 size={15} /> {phase === "compiled" ? "Skill compiled" : "Compile into skill"}
-                  </button>
+                  <span className="approval-complete"><Check size={15} aria-hidden="true" /> Review complete</span>
                 )}
               </div>
               <div className="interpreter-limitation"><Languages size={13} /> This pre-visit communication aid does not replace a qualified interpreter during the clinical encounter.</div>
@@ -571,31 +539,13 @@ export function CelyStudio() {
         </article>
       </section>
 
-      {compiled && (
-        <section className="compiled-section">
-          <div className="compiled-copy">
-            <div>
-              <div className="panel-kicker">Governed skill</div>
-              <h2><code>/{compiled.name}</code> is ready to test</h2>
-              <p>The approved workflow is packaged with its instructions, permissions, and test trace.</p>
-              <ul className="compiled-files">{compiled.files.map((file) => <li key={file.path}><FileCheck2 size={13} aria-hidden="true" /> {file.path}</li>)}</ul>
-            </div>
-          </div>
-          <div className="code-preview">
-            <div className="code-header"><span>skills/{compiled.name}/SKILL.md</span><span>v{compiled.version}</span></div>
-            <pre>{compiled.files.find((file) => file.path === "SKILL.md")?.content.split("\n").slice(0, 18).join("\n")}</pre>
-          </div>
-        </section>
-      )}
-
       <footer className="audit-trail">
         <div><Activity size={14} /><span>Audit trail</span><strong>{run?.runId ?? "No run yet"}</strong></div>
         <div className="audit-events">
           <span className={activeStep >= 0 ? "done" : ""}>Intake captured</span><ArrowRight size={12} />
           <span className={activeStep >= 2 ? "done" : ""}>Policy evaluated</span><ArrowRight size={12} />
           <span className={run ? "done" : ""}>Handoff produced</span><ArrowRight size={12} />
-          <span className={run?.approval.status === "approved" ? "done" : ""}>Human approved</span><ArrowRight size={12} />
-          <span className={compiled ? "done" : ""}>Skill versioned</span>
+          <span className={run?.approval.status === "approved" ? "done" : ""}>Human approved</span>
         </div>
       </footer>
     </main>

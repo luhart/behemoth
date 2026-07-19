@@ -235,8 +235,7 @@ p {
 .button-primary,
 .intake-continue,
 .intake-confirm,
-.button-approve,
-.button-compile {
+.button-approve {
   border-color: var(--cely-color-brand);
   background: var(--cely-color-brand);
   color: var(--cely-color-action-text);
@@ -294,18 +293,10 @@ p {
   font-weight: var(--cely-font-weight-medium);
 }
 
-.workflow-version,
-.workflow-policy {
+.workflow-version {
   color: var(--cely-color-ink-muted);
   font-size: var(--cely-font-size-label);
   line-height: var(--cely-line-height-label);
-}
-
-.workflow-policy {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cely-space-2);
-  font-weight: var(--cely-font-weight-medium);
 }
 
 .workflow-steps {
@@ -313,7 +304,7 @@ p {
   padding: var(--cely-space-4) 0 var(--cely-space-6);
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .workflow-step {
@@ -561,8 +552,7 @@ p {
   font-weight: var(--cely-font-weight-medium);
 }
 
-.channel-footer,
-.channel-notes {
+.channel-footer {
   min-height: 4rem;
   margin: 0;
   padding: var(--cely-space-4) var(--cely-space-8);
@@ -577,15 +567,13 @@ p {
   list-style: none;
 }
 
-.channel-footer span,
-.channel-notes li {
+.channel-footer span {
   display: inline-flex;
   align-items: center;
   gap: var(--cely-space-2);
 }
 
-.channel-footer svg,
-.channel-notes svg {
+.channel-footer svg {
   flex: 0 0 auto;
   color: var(--cely-color-brand);
 }
@@ -2059,9 +2047,19 @@ p {
   line-height: var(--cely-line-height-label);
 }
 
-.button-approve,
-.button-compile {
+.button-approve {
   flex: 0 0 auto;
+}
+
+.approval-complete {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cely-space-2);
+  color: var(--cely-color-confirmed);
+  font-size: var(--cely-font-size-supporting);
+  line-height: var(--cely-line-height-supporting);
+  font-weight: var(--cely-font-weight-semibold);
 }
 
 .interpreter-limitation {
@@ -2086,131 +2084,6 @@ p {
 .handoff-panel.is-escalation .approval-box {
   border-color: var(--cely-color-urgent);
   background: var(--cely-color-urgent-background);
-}
-
-/* Compiled output and audit */
-.compiled-section,
-.compiled-panel {
-  margin-top: var(--cely-space-12);
-  padding-block: var(--cely-space-8);
-  border-top: var(--cely-rule-width) solid var(--cely-color-brand);
-  border-bottom: var(--cely-rule-width) solid var(--cely-color-line);
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
-  gap: var(--cely-space-8);
-  animation: reveal var(--cely-motion-duration-explanatory) var(--cely-motion-ease-out) both;
-}
-
-@keyframes reveal {
-  from {
-    opacity: 0;
-    transform: translateY(var(--cely-motion-distance-medium));
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.compiled-copy {
-  display: flex;
-  gap: var(--cely-space-4);
-}
-
-.compiled-icon {
-  color: var(--cely-color-brand);
-}
-
-.compiled-copy h2 {
-  margin: var(--cely-space-2) 0 var(--cely-space-3);
-  font-family: var(--font-display-stack);
-  font-size: var(--cely-font-size-heading-2);
-  line-height: var(--cely-line-height-heading-2);
-  letter-spacing: var(--cely-letter-spacing-heading);
-  font-weight: var(--cely-font-weight-medium);
-}
-
-.compiled-copy h2 code {
-  color: var(--cely-color-brand);
-  font-family: var(--font-evidence-stack);
-  font-size: 0.8em;
-}
-
-.compiled-copy p {
-  max-width: 36rem;
-  margin: 0;
-  color: var(--cely-color-ink-muted);
-  font-size: var(--cely-font-size-supporting);
-  line-height: var(--cely-line-height-supporting);
-}
-
-.compiled-files,
-.file-chips {
-  margin-top: var(--cely-space-4);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--cely-space-1);
-  padding: 0;
-  list-style: none;
-}
-
-.compiled-files span,
-.compiled-files li,
-.file-chips span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--cely-space-2);
-  color: var(--cely-color-ink-muted);
-  font-family: var(--font-evidence-stack);
-  font-size: 0.6875rem;
-  line-height: 1rem;
-}
-
-.code-preview {
-  min-width: 0;
-  overflow: hidden;
-  border: 1px solid var(--cely-color-ink);
-  border-radius: var(--cely-radius-medium);
-  background: var(--cely-color-ink);
-}
-
-.code-header {
-  min-height: 2.5rem;
-  padding-inline: var(--cely-space-3);
-  border-bottom: 1px solid rgb(255 252 247 / 14%);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--cely-space-2);
-  color: rgb(255 252 247 / 68%);
-  font-family: var(--font-evidence-stack);
-  font-size: 0.6875rem;
-  line-height: 1rem;
-}
-
-.code-dots {
-  display: flex;
-  gap: var(--cely-space-1);
-}
-
-.code-dots i {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: var(--cely-radius-circle);
-  background: rgb(255 252 247 / 36%);
-}
-
-.code-preview pre {
-  max-height: 18rem;
-  margin: 0;
-  padding: var(--cely-space-4);
-  overflow: auto;
-  color: var(--cely-color-canvas);
-  font-family: var(--font-evidence-stack);
-  font-size: 0.75rem;
-  line-height: 1.25rem;
-  white-space: pre-wrap;
 }
 
 .audit-footer,
@@ -2278,8 +2151,7 @@ p {
   .button-primary:hover:not(:disabled),
   .intake-continue:hover:not(:disabled),
   .intake-confirm:hover:not(:disabled),
-  .button-approve:hover:not(:disabled),
-  .button-compile:hover:not(:disabled) {
+  .button-approve:hover:not(:disabled) {
     background: var(--cely-color-ink);
     border-color: var(--cely-color-ink);
   }
@@ -2332,10 +2204,6 @@ p {
     border-bottom: var(--cely-rule-width) solid var(--cely-color-line);
   }
 
-  .compiled-section,
-  .compiled-panel {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 47.5rem) {
@@ -2532,24 +2400,6 @@ p {
   .evidence-row {
     grid-template-columns: 1fr;
     gap: var(--cely-space-1);
-  }
-
-  .compiled-section,
-  .compiled-panel {
-    margin-top: var(--cely-space-8);
-    padding-block: var(--cely-space-6);
-  }
-
-  .compiled-copy {
-    flex-direction: column;
-  }
-
-  .code-header {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .code-dots {
-    display: none;
   }
 
   .audit-footer {

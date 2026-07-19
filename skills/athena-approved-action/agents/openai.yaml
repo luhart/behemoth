@@ -1,4 +1,0 @@
-interface:
-  display_name: "Athena Approved Action"
-  short_description: "Gate and verify Athena Preview writebacks"
-  default_prompt: "Use $athena-approved-action to execute and verify an explicitly approved Athena Preview write."

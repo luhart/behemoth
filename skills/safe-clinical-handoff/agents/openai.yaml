@@ -1,4 +1,0 @@
-interface:
-  display_name: "Safe Clinical Handoff"
-  short_description: "Build concise, uncertainty-aware prereads"
-  default_prompt: "Use $safe-clinical-handoff to create a one-minute clinician preread with explicit uncertainties."

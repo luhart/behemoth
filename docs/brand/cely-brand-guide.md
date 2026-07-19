@@ -32,7 +32,7 @@ Cely helps a care team listen, clarify, confirm, connect, cite, review, and carr
 
 - A governed way to turn patient concerns and chart context into an evidence-linked visit agenda.
 - A workflow layer that records provenance, review, and approval.
-- A system for turning approved workflows into reusable, testable skills.
+- A system for carrying approved clinical work through explicit, reviewable steps.
 - A shared experience for patients, clinicians, and practice teams.
 
 ### What Cely is not
@@ -61,11 +61,11 @@ Use the shortest level that gives the audience enough context. Do not stack ever
 
 ### Short product description
 
-> Cely helps patients describe what matters in the language they prefer. It preserves their words, asks focused follow-up questions, and connects relevant chart evidence for clinician review. Approved work can become a governed skill that care teams can test and reuse.
+> Cely helps patients describe what matters in the language they prefer. It preserves their words, asks focused follow-up questions, and connects relevant chart evidence for clinician review. The resulting visit agenda keeps provenance, uncertainty, and approval visible.
 
 ### Practice-leader description
 
-> Cely gives outpatient teams a consistent way to prepare for visits without hiding uncertainty or provenance. It connects the patient's account with relevant chart context, routes questions for review, and records clinician approval before work is reused.
+> Cely gives outpatient teams a consistent way to prepare for visits without hiding uncertainty or provenance. It connects the patient's account with relevant chart context, routes questions for review, and records clinician approval before any chart action.
 
 ### Claims boundary
 

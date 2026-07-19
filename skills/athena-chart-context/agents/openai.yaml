@@ -1,4 +1,0 @@
-interface:
-  display_name: "Athena Chart Context"
-  short_description: "Ground workflows in cited Athena chart facts"
-  default_prompt: "Use $athena-chart-context to retrieve the minimum relevant Athena chart facts with provenance."

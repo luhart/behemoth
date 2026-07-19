@@ -102,7 +102,7 @@ const scripts: Record<string, IntakeScript> = {
     clarificationQuestionEnglish:
       "When you say “kumikirot,” which is closest: an intermittent ache, stinging or burning, or a different feeling?",
     clarificationLabel: "Magdagdag ng kaunting detalye",
-    clarificationLabelEnglish: "Add one clarifying detail",
+    clarificationLabelEnglish: "Add any clarifying detail",
     clarificationPlaceholder: "Sabihin kung ano ang pinakamalapit na pakiramdam…",
     demoClarification: "Paulit-ulit na pananakit, lalo na kapag itinataas ko ang braso.",
     confirmationHeading: "Ito ba ang ibig mong sabihin?",
@@ -191,7 +191,7 @@ const scripts: Record<string, IntakeScript> = {
     clarificationQuestionEnglish:
       "Did you stop the medicine before the dizziness began, or because you were already feeling dizzy?",
     clarificationLabel: "Añada un detalle para aclararlo",
-    clarificationLabelEnglish: "Add one clarifying detail",
+    clarificationLabelEnglish: "Add any clarifying detail",
     clarificationPlaceholder: "Cuéntenos qué ocurrió primero…",
     demoClarification: "La dejé porque ya me sentía mareada.",
     confirmationHeading: "¿Esto es lo que quiso decir?",
@@ -238,8 +238,8 @@ function genericScript(languageName: string, languageCode: string): IntakeScript
     demoComplaint: "",
     clarificationQuestion: experience.clarificationQuestion,
     clarificationQuestionEnglish: "Can you add one detail about when this started or what it feels like?",
-    clarificationLabel: "Add one clarifying detail",
-    clarificationLabelEnglish: "Add one clarifying detail",
+    clarificationLabel: "Add any clarifying detail",
+    clarificationLabelEnglish: "Add any clarifying detail",
     clarificationPlaceholder: "Respond in your own language…",
     demoClarification: "",
     confirmationHeading: experience.confirmationHeading,
@@ -265,7 +265,7 @@ function genericScript(languageName: string, languageCode: string): IntakeScript
   };
 }
 
-const stageLabels = ["Symptoms", "Language", "Clarify", "Confirm"] as const;
+const stageLabels = ["Symptoms", "Clarify", "Confirm"] as const;
 
 function normalize(value: string): string {
   return value.trim().replace(/\s+/g, " ").toLocaleLowerCase();
@@ -355,8 +355,8 @@ export function PatientIntake({
   const script = useMemo(() => preferredLanguage && languageCode
     ? scripts[preferredLanguage] ?? genericScript(preferredLanguage, languageCode)
     : null, [languageCode, preferredLanguage]);
-  const stageIndex = stage === "confirmed" ? stageLabels.length : stage === "urgent" ? 1 : stageLabels.indexOf(
-    stage === "complaint" ? "Symptoms" : stage === "language" ? "Language" : stage === "clarification" ? "Clarify" : "Confirm",
+  const stageIndex = stage === "confirmed" ? stageLabels.length : stage === "urgent" ? 0 : stageLabels.indexOf(
+    stage === "complaint" || stage === "language" ? "Symptoms" : stage === "clarification" ? "Clarify" : "Confirm",
   );
 
   const demoForComplaint = useMemo(() => {
@@ -681,9 +681,9 @@ export function PatientIntake({
 
   return (
     <section className="patient-intake" aria-label="Guided patient intake">
-      <div className="intake-progress" aria-label={`Intake progress: step ${Math.min(stageIndex + 1, 4)} of 4`}>
+      <div className="intake-progress" aria-label={`Intake progress: step ${Math.min(stageIndex + 1, stageLabels.length)} of ${stageLabels.length}`}>
         <span className="intake-progress-summary">
-          Step {Math.min(stageIndex + 1, 4)} of 4 · {stageLabels[Math.min(stageIndex, stageLabels.length - 1)]}
+          Step {Math.min(stageIndex + 1, stageLabels.length)} of {stageLabels.length} · {stageLabels[Math.min(stageIndex, stageLabels.length - 1)]}
         </span>
         {stageLabels.map((label, index) => {
           const complete = index < stageIndex;

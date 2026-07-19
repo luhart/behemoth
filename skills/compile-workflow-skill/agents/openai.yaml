@@ -1,4 +1,0 @@
-interface:
-  display_name: "Compile Workflow Skill"
-  short_description: "Turn approved traces into governed skills"
-  default_prompt: "Use $compile-workflow-skill to convert an approved workflow trace into a versioned, testable agent skill."

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import type { AgendaItem, Evidence } from "../src/lib/workflow/contracts";
+import { scenarios } from "../src/lib/demo/fixtures";
+import { HandoffSchema, type AgendaItem, type Evidence } from "../src/lib/workflow/contracts";
 import { patientAnchoredAgenda } from "../src/lib/workflow/handoff-evidence";
 
 describe("handoff agenda evidence guard", () => {
@@ -32,5 +33,27 @@ describe("handoff agenda evidence guard", () => {
       "Evaluate persistent foot pain",
       "Review a patient concern with chart support",
     ]);
+  });
+
+  test("rejects agenda evidence that is absent from global handoff evidence", () => {
+    const handoff = scenarios["maya-previsit"].handoff;
+    const invalid = {
+      ...handoff,
+      agenda: [{ ...handoff.agenda[0], evidenceIds: ["not-in-global-evidence"] }],
+    };
+    expect(HandoffSchema.safeParse(invalid).success).toBe(false);
+  });
+
+  test("keeps every fixture agenda citation within supplied and global evidence", () => {
+    for (const fixture of Object.values(scenarios)) {
+      expect(HandoffSchema.safeParse(fixture.handoff).success).toBe(true);
+      const supplied = new Set(fixture.evidence.map((item) => item.id));
+      const global = new Set(fixture.handoff.evidenceIds);
+      for (const item of fixture.handoff.agenda) {
+        expect(item.evidenceIds.length).toBeGreaterThanOrEqual(1);
+        expect(item.evidenceIds.length).toBeLessThanOrEqual(3);
+        expect(item.evidenceIds.every((id) => supplied.has(id) && global.has(id))).toBe(true);
+      }
+    }
   });
 });

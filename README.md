@@ -1,6 +1,6 @@
 # Cely
 
-**The clinical workflow compiler.** Cely turns multilingual patient concerns into a clinician-ready, evidence-linked visit agenda grounded in Athena Preview. After a clinician approves the result, Cely can compile the completed workflow into a versioned, testable skill for reuse by agents and care teams.
+**Governed clinical workflow intelligence.** Cely turns multilingual patient concerns into a clinician-ready, evidence-linked visit agenda grounded in Athena Preview. It keeps the patient's words, chart evidence, uncertainty, and clinician approval connected from intake through handoff.
 
 Cely is not a diagnostic chatbot. It preserves the patient's words, makes uncertainty visible, keeps patient-reported and chart-derived facts distinct, and requires human approval before any Athena write.
 
@@ -15,8 +15,7 @@ The current product slice is a multilingual pre-visit intake for new, returning,
 - Athena Preview context for appointments, problems, active medications, and allergies;
 - an evidence-linked clinician handoff with visible rationale and citations;
 - deterministic red-flag screening before the model for supported English, Spanish, and Tagalog phrases, plus a second screen over the English interpretation for other languages;
-- clinician- or nurse-approved Preview note writeback behind a separate feature flag; and
-- compilation of an approved run into a portable skill package with policy and replay artifacts.
+- clinician- or nurse-approved Preview note writeback behind a separate feature flag.
 
 The detector recognizes many common written languages. Short or ambiguous messages retain the original text and ask the patient to confirm or enter a language. Localized intake controls are available for several widely used languages, with an English fallback for the rest.
 
@@ -32,8 +31,7 @@ Application state is session-scoped and held in memory; Cely does not add a pers
 2. Cely detects Tagalog from Maya's first message, preserves her exact words, asks one bounded clarification, separates the concerns, and asks which one matters most to her.
 3. Submit the confirmed intake. For the configured Maya scenario, Cely retrieves synthetic Athena Preview chart context and creates an evidence-linked clinician agenda. Maya's stated priority remains separate from clinical prioritization.
 4. Approve the handoff. With the default configuration, Cely validates the payload and records a dry-run receipt without mutating Athena.
-5. Compile the approved trace into `SKILL.md`, agent metadata, a permission policy, and a replayable golden trace.
-6. Run the red-flag replay, or enter a supported active red-flag phrase. Cely stops routine intake, displays emergency guidance, bypasses the model when the original language matches a deterministic rule, and performs no Athena write.
+5. Run the red-flag replay, or enter a supported active red-flag phrase. Cely stops routine intake, displays emergency guidance, bypasses the model when the original language matches a deterministic rule, and performs no Athena write.
 
 For a second routine path, choose `Tagalog foot pain`. The example preserves six months of left-foot pain with big-toe onset, an unspecified medication concern, a prior clinician's arthritis attribution, and a patient-observed food association. The handoff does not diagnose gout, infer a medication, or assert a dietary cause.
 
@@ -124,18 +122,8 @@ src/components/             patient intake and clinician workflow UI
 src/lib/ai/                 constrained interpretation and handoff generation
 src/lib/athena/             Preview-only authentication and typed client
 src/lib/demo/               deterministic demo fixtures
-src/lib/skills/             approved-trace skill compiler
 src/lib/workflow/           contracts, runner, evidence, metrics, and policy
-skills/                     portable Codex- and Claude-compatible skills
-tests/                      language, safety, policy, evidence, and compiler tests
+tests/                      language, safety, policy, evidence, and workflow tests
 ```
 
-## Portable skills
-
-- `adaptive-patient-intake` — language-aware agenda capture and bounded clarification;
-- `athena-chart-context` — minimum-necessary Preview chart retrieval with provenance;
-- `safe-clinical-handoff` — concise preread with uncertainty and discrepancies;
-- `athena-approved-action` — explicit approval, Preview write, and verification; and
-- `compile-workflow-skill` — approved trace to governed skill package.
-
-The same runtime and policy gates can later support workflows such as care-gap outreach, record migration, and post-visit follow-up without weakening human approval or evidence requirements.
+The same workflow and policy gates can later support care-gap outreach, record migration, and post-visit follow-up without weakening human approval or evidence requirements.
