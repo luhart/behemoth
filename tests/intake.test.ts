@@ -52,24 +52,25 @@ describe("confirmed intake contract", () => {
     expect(parsed.topConcernId).toBe("hearing");
   });
 
-  test("preserves the persistent foot-pain example as four attributed concerns", () => {
+  test("preserves the persistent foot-pain example as five attributed concerns", () => {
     const parsed = ConfirmedIntakeSchema.parse({
       preferredLanguage: "Tagalog",
       chiefComplaint:
-        "Doc, anim na buwan na pong masakit ang kaliwa kong paa, at parang hindi po gumagana ang gamot ko. Lagi pong sinasabi ng doktor na arthritis ito dahil masakit tuwing umaga, pero hindi naman po gumagaling. Napansin ko po na mas masakit siya tuwing kumakain ako ng baboy.",
+        "Doc, anim na buwan na pong masakit ang kaliwa kong paa, at parang hindi po gumagana ang gamot ko. Lagi pong sinasabi ng doktor na arthritis ito dahil masakit tuwing umaga, pero hindi naman po gumagaling. Napansin ko po na mas masakit siya tuwing kumakain ako ng baboy. Baka rin po kasi ito kulam, dahil ang tagal na po nito at parang wala pa ring nangyayari kahit gaano na po ako kagamot.",
       clarificationQuestion:
         "Saan nagsisimula ang sakit, at paano mo ilalarawan ang sakit kapag pinakamalala?",
       clarificationResponse:
-        "Oo, matalas at matinding sakit po ito sa mga binti ko pero nagsisimula sa hinlalaki ng paa ko.",
+        "Oo, matalas/matinding sakit po ito sa mga binti ko pero nagsastart sa big toe ko.",
       nativeInterpretation:
-        "Anim na buwan nang masakit ang kaliwang paa. Pakiramdam ng pasyente ay hindi nakatutulong ang gamot. Sinabi raw ng doktor na arthritis dahil masakit sa umaga, ngunit hindi gumagaling. Napapansin niyang mas sumasakit pagkatapos kumain ng baboy. Matalas at matindi ang sakit sa mga binti at nagsisimula sa hinlalaki ng paa.",
+        "Anim na buwan nang masakit ang kaliwang paa. Pakiramdam ng pasyente ay hindi nakatutulong ang gamot. Sinabi raw ng doktor na arthritis dahil masakit sa umaga, ngunit hindi gumagaling. Napapansin niyang mas sumasakit pagkatapos kumain ng baboy. Iniisip din ng pasyente na baka kulam ito dahil matagal na at hindi gumagaling sa kabila ng paggamot. Matalas at matindi ang sakit sa mga binti at nagsisimula sa hinlalaki ng paa.",
       englishInterpretation:
-        "Left foot pain for six months; the patient feels the current medication is not helping. A previous doctor has called it arthritis because it hurts in the morning, but it has not improved. The patient reports worse pain after eating pork. The pain is sharp and severe in the legs and starts at the big toe.",
+        "Left foot pain for six months; the patient feels the current medication is not helping. A previous doctor has called it arthritis because it hurts in the morning, but it has not improved. The patient reports worse pain after eating pork. The patient also wonders whether kulam may explain the persistent symptoms despite treatment. The pain is sharp and severe in the legs and starts at the big toe.",
       interpretationMethod: "deterministic",
       ambiguities: [
         "The medication name, dose, adherence, and indication are not specified.",
         "The extent and timing of pain described as involving the legs but starting at the big toe require clinician clarification.",
         "Worsening after eating pork is a patient-observed association and is not presented as a confirmed cause.",
+        "Kulam is the patient's cultural or spiritual explanation and is preserved as a belief, not presented as a clinical fact.",
       ],
       interpretationConfirmed: true,
       confidence: "medium",
@@ -98,14 +99,21 @@ describe("confirmed intake contract", () => {
           englishSummary: "Patient-observed worsening after eating pork",
           mentionOrder: 4,
         },
+        {
+          id: "cultural-explanation",
+          nativeSummary: "Pag-aalala ng pasyente na baka kulam ang sanhi dahil matagal at hindi gumagaling ang sakit",
+          englishSummary: "Patient concern that kulam may explain the persistent symptoms",
+          mentionOrder: 5,
+        },
       ],
       topConcernId: "foot-pain",
       priorityConfirmed: true,
     });
 
-    expect(parsed.confirmedConcerns).toHaveLength(4);
+    expect(parsed.confirmedConcerns).toHaveLength(5);
     expect(parsed.confirmedConcerns?.[2]?.englishSummary).toStartWith("Prior arthritis explanation");
     expect(parsed.confirmedConcerns?.[3]?.englishSummary).toStartWith("Patient-observed");
+    expect(parsed.confirmedConcerns?.[4]?.englishSummary).toStartWith("Patient concern");
     expect(parsed.ambiguities?.[0]).toContain("medication name");
     expect(evaluateIntakeSafety(`${parsed.chiefComplaint} ${parsed.clarificationResponse}`)).toEqual({ branch: "standard" });
   });

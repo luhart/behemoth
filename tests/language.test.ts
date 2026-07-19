@@ -6,7 +6,7 @@ import { hasLocalizedExperience } from "../src/lib/workflow/language-profiles";
 describe("deterministic intake language detection", () => {
   test("detects the persistent foot-pain example as Tagalog", () => {
     const result = detectIntakeLanguage(
-      "Doc, anim na buwan na pong masakit ang kaliwa kong paa, at parang hindi po gumagana ang gamot ko. Lagi pong sinasabi ng doktor na arthritis ito dahil masakit tuwing umaga, pero hindi naman po gumagaling.",
+      "Doc, anim na buwan na pong masakit ang kaliwa kong paa, at parang hindi po gumagana ang gamot ko. Lagi pong sinasabi ng doktor na arthritis ito dahil masakit tuwing umaga, pero hindi naman po gumagaling. Napansin ko po na mas masakit siya tuwing kumakain ako ng baboy. Baka rin po kasi ito kulam, dahil ang tagal na po nito at parang wala pa ring nangyayari kahit gaano na po ako kagamot.",
     );
     expect(result).toMatchObject({ status: "detected", languageName: "Tagalog", languageCode: "tl", confidence: "high" });
   });

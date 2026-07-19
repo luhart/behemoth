@@ -33,7 +33,7 @@ Application state is session-scoped and held in memory; Cely does not add a pers
 4. Approve the handoff. With the default configuration, Cely validates the payload and records a dry-run receipt without mutating Athena.
 5. Run the red-flag replay, or enter a supported active red-flag phrase. Cely stops routine intake, displays emergency guidance, bypasses the model when the original language matches a deterministic rule, and performs no Athena write.
 
-For a second routine path, choose `Tagalog foot pain`. The example preserves six months of left-foot pain with big-toe onset, an unspecified medication concern, a prior clinician's arthritis attribution, and a patient-observed food association. The handoff does not diagnose gout, infer a medication, or assert a dietary cause.
+For a second routine path, choose `Tagalog foot pain`. The example preserves six months of left-foot pain with big-toe onset, an unspecified medication concern, a prior clinician's arthritis attribution, a patient-observed food association, and the patient's concern about kulam. The handoff does not diagnose gout, infer a medication, assert a dietary cause, or present the cultural or spiritual explanation as clinical fact.
 
 ## Run locally
 
